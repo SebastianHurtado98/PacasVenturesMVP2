@@ -30,7 +30,18 @@ async function getLicitacion(id: string): Promise<Licitacion | null> {
       fechaInicioTrabajo: "2024-01-15",
       informacionAdicional: "Se requiere experiencia en edificios altos"
     },
-    // Añade más licitaciones de ejemplo si lo deseas
+    {
+      id: 2,
+      nombre: "Proyecto B",
+      status: "Inactivo",
+      partida: "Plomería",
+      fechaCierre: "2023-12-31",
+      lugar: "Ciudad de México",
+      presupuestoInicial: 100000,
+      especificacionesTecnicas: "Instalación de sistema eléctrico para edificio de 10 pisos",
+      fechaInicioTrabajo: "2024-01-15",
+      informacionAdicional: "Se requiere experiencia en edificios altos"
+    },
   ];
 
   return licitaciones.find(l => l.id === parseInt(id)) || null;

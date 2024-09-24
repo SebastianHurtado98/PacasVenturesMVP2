@@ -17,6 +17,7 @@ async function getLicitacionesActivas(): Promise<Licitacion[]> {
     { id: 1, nombreProyecto: "Proyecto A", constructora: "Constructora X", fechaCierre: "2023-12-31", lugar: "Ciudad de México", partida: "Electricidad", fechaInicioTrabajo: "2024-01-15" },
     { id: 2, nombreProyecto: "Proyecto B", constructora: "Constructora Y", fechaCierre: "2023-12-15", lugar: "Guadalajara", partida: "Plomería", fechaInicioTrabajo: "2024-01-02" },
     { id: 3, nombreProyecto: "Proyecto C", constructora: "Constructora Z", fechaCierre: "2023-12-20", lugar: "Monterrey", partida: "Carpintería", fechaInicioTrabajo: "2024-01-10" },
+    { id: 4, nombreProyecto: "Proyecto D", constructora: "Constructora W", fechaCierre: "2023-12-20", lugar: "Monterrey", partida: "Acabados", fechaInicioTrabajo: "2024-01-26" },
   ];
 }
 

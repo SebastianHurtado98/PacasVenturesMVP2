@@ -57,7 +57,7 @@ export default function CrearLicitacion() {
             value={formData.partida}
             onChange={handleChange}
           >
-            <option value="">Seleccione una partida</option>
+            <option value="">Selecciona una partida</option>
             <option value="electricidad">Electricidad</option>
             <option value="plomeria">Plomería</option>
             <option value="carpinteria">Carpintería</option>

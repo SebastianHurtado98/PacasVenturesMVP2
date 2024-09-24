@@ -1,3 +1,7 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 
 interface Cotizacion {
@@ -18,8 +22,27 @@ async function getCotizaciones(): Promise<Cotizacion[]> {
   ];
 }
 
-export default async function MisCotizaciones() {
-  const cotizaciones = await getCotizaciones();
+export default function MisCotizaciones() {
+  const router = useRouter();
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCotizaciones() {
+      try {
+        const data = await getCotizaciones();
+        setCotizaciones(data);
+      } catch (error) {
+        console.error('Error fetching cotizaciones:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchCotizaciones();
+  }, []);
+
+  if (isLoading) return <div className="text-center py-10">Cargando...</div>;
 
   return (
     <div>
@@ -53,7 +76,9 @@ export default async function MisCotizaciones() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Button size="sm">Ver Detalles</Button>
+                  <Button size="sm" onClick={() => router.push(`/proveedor/cotizaciones/${cotizacion.id}`)}>
+                    Ver Detalles
+                  </Button>
                 </td>
               </tr>
             ))}

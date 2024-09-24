@@ -89,7 +89,7 @@ export default function Login() {
                 value={formData.userType}
                 onChange={handleChange}
               >
-                <option value="">Seleccione tipo de usuario</option>
+                <option value="">Selecciona tipo de usuario</option>
                 <option value="constructora">Constructora</option>
                 <option value="proveedor">Proveedor</option>
                 <option value="admin">Admin</option>

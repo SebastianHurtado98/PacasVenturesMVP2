@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import MultiSelectDropdown from '../../components/MultiSelectDropdown'
+import { specializations } from '../../utils/specializations'
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function Register() {
   const router = useRouter()
@@ -12,11 +16,20 @@ export default function Register() {
     phone: '',
     companyName: '',
     ruc: '',
-    specialization: '',
+    specializations: [] as string[],
+    userType: '',
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSpecializationsChange = (selected: string[]) => {
+    setFormData({ ...formData, specializations: selected })
+  }
+
+  const handleUserTypeChange = (value: string) => {
+    setFormData({ ...formData, userType: value })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,40 +135,49 @@ export default function Register() {
                 name="ruc"
                 type="text"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="RUC"
                 value={formData.ruc}
                 onChange={handleChange}
               />
             </div>
-            <div>
-              <label htmlFor="specialization" className="sr-only">
-                Especialización
-              </label>
-              <select
-                id="specialization"
-                name="specialization"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                value={formData.specialization}
-                onChange={handleChange}
-              >
-                <option value="">Seleccione una especialización</option>
-                <option value="construccion">Construcción</option>
-                <option value="electricidad">Electricidad</option>
-                <option value="plomeria">Plomería</option>
-                <option value="carpinteria">Carpintería</option>
-              </select>
-            </div>
           </div>
 
           <div>
-            <button
+            <label htmlFor="user-type" className="block text-sm font-medium text-gray-700 mb-2">
+              Registrarse como
+            </label>
+            <Select onValueChange={handleUserTypeChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccione el tipo de usuario" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="proveedor">Proveedor</SelectItem>
+                <SelectItem value="constructora">Constructora</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.userType === 'proveedor' && (
+            <div>
+              <label htmlFor="specializations" className="block text-sm font-medium text-gray-700 mb-2">
+                Especializaciones
+              </label>
+              <MultiSelectDropdown
+                options={specializations}
+                selectedOptions={formData.specializations}
+                onChange={handleSpecializationsChange}
+              />
+            </div>
+          )}
+
+          <div>
+            <Button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full"
             >
               Registrarse
-            </button>
+            </Button>
           </div>
         </form>
       </div>

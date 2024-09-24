@@ -7,15 +7,15 @@ export default function Home() {
       <main className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Bienvenido al Sistema de Licitaciones
+            Bienvenido a Licibit
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Conectamos constructoras y proveedores para simplificar el proceso de licitaciones
+          Conectamos los mejores proveedores y constructores.
           </p>
           <div className="space-x-4">
             <Button asChild>
               <Link href="/register">
-                Registrarse
+                Registrate
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -29,17 +29,17 @@ export default function Home() {
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           <FeatureCard
             title="Para Constructoras"
-            description="Publique licitaciones y reciba cotizaciones de proveedores calificados."
+            description="Publica licitaciones y reciba cotizaciones de proveedores calificados."
             icon={<BuildingIcon className="w-12 h-12 text-blue-500" />}
           />
           <FeatureCard
             title="Para Proveedores"
-            description="Encuentre oportunidades de negocio y envíe sus cotizaciones fácilmente."
+            description="Encuentra oportunidades de negocio y envía tus cotizaciones fácilmente."
             icon={<ToolsIcon className="w-12 h-12 text-green-500" />}
           />
           <FeatureCard
             title="Proceso Simplificado"
-            description="Gestione todo el proceso de licitación en una sola plataforma."
+            description="Gestiona todo el proceso de licitación en una sola plataforma."
             icon={<ChartIcon className="w-12 h-12 text-purple-500" />}
           />
         </div>
@@ -47,7 +47,7 @@ export default function Home() {
 
       <footer className="bg-gray-100 mt-16 py-8">
         <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>&copy; 2023 Sistema de Licitaciones. Todos los derechos reservados.</p>
+          <p>&copy; 2024 Licibit. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>
