@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useSupabase } from '@/components/supabase-provider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import MultiSelectDropdown from '@/components/MultiSelectDropdown'
+import CountdownTimer from '@/components/CountdownTimer'
+import { specializations } from '@/utils/specializations'
 
 interface Bid {
   id: number
@@ -16,6 +19,12 @@ interface Bid {
   location: string
   job_start_date: string
   initial_budget: number
+  company_logo: string
+  project_name: string
+  main_description: string
+  user: {
+    enterprise_name: string
+  }
 }
 
 export default function Home() {
@@ -23,19 +32,38 @@ export default function Home() {
   const { supabase } = useSupabase()
   const { toast } = useToast()
   const [bids, setBids] = useState<Bid[]>([])
+  const [filteredBids, setFilteredBids] = useState<Bid[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [partidas, setPartidas] = useState<string[]>([])
+  const [selectedPartidas, setSelectedPartidas] = useState<string[]>([])
 
   useEffect(() => {
     async function fetchBids() {
       try {
         const { data, error } = await supabase
-          .from('bid')
-          .select('id, partida, publication_end_date, location, job_start_date, initial_budget')
-          .order('publication_end_date', { ascending: false })
+        .from('bid')
+        .select(`
+          *,
+          user (enterprise_name)
+        `)
+        .order('publication_end_date', { ascending: false });
+
+        console.log('data:', data)
 
         if (error) throw error
 
-        setBids(data || [])
+        if (data) {
+          const typedBids: Bid[] = data.map(bid => ({
+            ...bid,
+            user: bid.user || { enterprise_name: 'Desconocido' }
+          }))
+          setBids(typedBids)
+          setFilteredBids(typedBids)
+        
+          // Extract unique partidas
+          const uniquePartidas = Array.from(new Set(typedBids.map(bid => bid.partida)))
+          setPartidas(uniquePartidas)
+        }
       } catch (error) {
         console.error('Error fetching bids:', error)
         toast({
@@ -51,6 +79,19 @@ export default function Home() {
     fetchBids()
   }, [supabase, toast])
 
+  useEffect(() => {
+    if (selectedPartidas.length === 0) {
+      setFilteredBids(bids)
+    } else {
+      const filtered = bids.filter(bid => selectedPartidas.includes(bid.partida))
+      setFilteredBids(filtered)
+    }
+  }, [selectedPartidas, bids])
+
+  const handlePartidasChange = (selected: string[]) => {
+    setSelectedPartidas(selected)
+  }
+
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
 
   return (
@@ -60,35 +101,56 @@ export default function Home() {
           Licitaciones Activas
         </h1>
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Partida</TableHead>
-                <TableHead>Fecha de Cierre</TableHead>
-                <TableHead>Presupuesto inicial</TableHead>
-                <TableHead>Ubicación</TableHead>
-                <TableHead>Fecha de Inicio</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bids.map((bid) => (
-                <TableRow key={bid.id}>
-                  <TableCell>{bid.partida}</TableCell>
-                  <TableCell>{new Date(bid.publication_end_date).toLocaleDateString()}</TableCell>
-                  <TableCell>${bid.initial_budget.toLocaleString()}</TableCell>
-                  <TableCell>{bid.location}</TableCell>
-                  <TableCell>{new Date(bid.job_start_date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Button onClick={() => router.push(`/licitacion/${bid.id}`)}>
-                      Ver detalle y cotizar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="mb-8">
+          <label htmlFor="partidas-filter" className="block text-sm font-medium text-gray-700 mb-2">
+            Filtrar por Partidas
+          </label>
+          <MultiSelectDropdown
+            options={specializations}
+            selectedOptions={selectedPartidas}
+            onChange={handlePartidasChange}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBids.map((bid) => (
+            <Card key={bid.id} className="flex flex-col">
+              <CardHeader>
+                <div className="w-full h-40 relative mb-4">
+                  <Image
+                    src={bid.company_logo || '/placeholder.svg'}
+                    alt={`Logo de ${bid.user.enterprise_name}`}
+                    layout="fill"
+                    objectFit="contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                </div>
+                <CardTitle>{bid.project_name}</CardTitle>
+                <p className="text-sm text-gray-500">{bid.user.enterprise_name}</p>
+                <p className="text-sm text-gray-700 mt-2">{bid.main_description}</p>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p><strong>Partida:</strong> {bid.partida}</p>
+                <p>
+                  <strong>Fecha de Cierre:</strong> {new Date(bid.publication_end_date).toLocaleDateString()}
+                  {' '}
+                  (<CountdownTimer endDate={bid.publication_end_date} />)
+                </p>
+                <p><strong>Presupuesto inicial:</strong> ${bid.initial_budget.toLocaleString()}</p>
+                <p><strong>Ubicación:</strong> {bid.location}</p>
+                <p><strong>Fecha de Inicio:</strong> {new Date(bid.job_start_date).toLocaleDateString()}</p>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={() => router.push(`/licitacion/${bid.id}`)} className="w-full">
+                  Ver detalle y cotizar
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       </main>
 

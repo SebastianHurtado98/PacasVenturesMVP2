@@ -1,7 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Specialization } from '../utils/specializations'
+
+interface Specialization {
+  category: string;
+  items: string[];
+}
 
 interface MultiSelectDropdownProps {
   options: Specialization[]
@@ -9,7 +13,7 @@ interface MultiSelectDropdownProps {
   onChange: (selected: string[]) => void
 }
 
-export default function MultiSelectDropdown({ options, selectedOptions, onChange }: MultiSelectDropdownProps) {
+export default function MultiSelectDropdown({ options = [], selectedOptions = [], onChange }: MultiSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [newTag, setNewTag] = useState('')
@@ -93,44 +97,30 @@ export default function MultiSelectDropdown({ options, selectedOptions, onChange
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <div className="max-h-60 overflow-y-auto">
-            {filteredOptions.map(category => (
-              <div key={category.category}>
-                <div className="px-2 py-1 bg-gray-100 font-semibold">{category.category}</div>
-                {category.items.map(item => (
-                  <div
-                    key={item}
-                    className="px-2 py-1 hover:bg-gray-100 cursor-pointer flex items-center"
-                    onClick={() => toggleOption(item)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedOptions.includes(item)}
-                      onChange={() => {}}
-                      className="mr-2"
-                    />
-                    {item}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="p-2 border-t border-gray-300">
-            <input
-              type="text"
-              placeholder="Agregar nueva especialización"
-              className="w-full p-2 border border-gray-300 rounded-md"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-            />
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                addNewTag()
-              }}
-              className="mt-2 w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
-            >
-              Agregar
-            </button>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(category => (
+                <div key={category.category}>
+                  <div className="px-2 py-1 bg-gray-100 font-semibold">{category.category}</div>
+                  {category.items.map(item => (
+                    <div
+                      key={item}
+                      className="px-2 py-1 hover:bg-gray-100 cursor-pointer flex items-center"
+                      onClick={() => toggleOption(item)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedOptions.includes(item)}
+                        onChange={() => {}}
+                        className="mr-2"
+                      />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div className="px-2 py-1 text-gray-500">No se encontraron especializaciones</div>
+            )}
           </div>
         </div>
       )}

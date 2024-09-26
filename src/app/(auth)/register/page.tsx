@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../utils/supabase'
-import MultiSelectDropdown from '../../components/MultiSelectDropdown'
-import { specializations } from '../../utils/specializations'
+import MultiSelectDropdown from '../../../components/MultiSelectDropdown'
+import { specializations } from '../../../utils/specializations'
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
