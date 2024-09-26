@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/utils/supabase'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
@@ -38,11 +38,11 @@ export default function Login() {
         }
 
         if (userType === 'constructora') {
-          router.push('/constructora')
+          router.push('/')
         } else if (userType === 'proveedor') {
-          router.push('/proveedor')
+          router.push('/')
         } else if (userType == 'admin') {
-          router.push('/admin')
+          router.push('/')
         } 
         else {
           throw new Error('Invalid user type')

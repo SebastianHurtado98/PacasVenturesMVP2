@@ -1,47 +1,94 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useSupabase } from '@/components/supabase-provider'
+import { useToast } from "@/hooks/use-toast"
+import { Toaster } from "@/components/ui/toaster"
+
+interface Bid {
+  id: number
+  partida: string
+  publication_end_date: string
+  location: string
+  job_start_date: string
+  initial_budget: number
+}
 
 export default function Home() {
+  const router = useRouter()
+  const { supabase } = useSupabase()
+  const { toast } = useToast()
+  const [bids, setBids] = useState<Bid[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchBids() {
+      try {
+        const { data, error } = await supabase
+          .from('bid')
+          .select('id, partida, publication_end_date, location, job_start_date, initial_budget')
+          .order('publication_end_date', { ascending: false })
+
+        if (error) throw error
+
+        setBids(data || [])
+      } catch (error) {
+        console.error('Error fetching bids:', error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las licitaciones. Por favor, intenta de nuevo.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBids()
+  }, [supabase, toast])
+
+  if (isLoading) return <div className="text-center py-10">Cargando...</div>
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
       <main className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Bienvenido a Licibit
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-          Conectamos los mejores proveedores y constructores.
-          </p>
-          <div className="space-x-4">
-            <Button asChild>
-              <Link href="/register">
-                Registrate
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/login">
-                Iniciar Sesión
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
+          Licitaciones Activas
+        </h1>
 
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <FeatureCard
-            title="Para Constructoras"
-            description="Publica licitaciones y reciba cotizaciones de proveedores calificados."
-            icon={<BuildingIcon className="w-12 h-12 text-blue-500" />}
-          />
-          <FeatureCard
-            title="Para Proveedores"
-            description="Encuentra oportunidades de negocio y envía tus cotizaciones fácilmente."
-            icon={<ToolsIcon className="w-12 h-12 text-green-500" />}
-          />
-          <FeatureCard
-            title="Proceso Simplificado"
-            description="Gestiona todo el proceso de licitación en una sola plataforma."
-            icon={<ChartIcon className="w-12 h-12 text-purple-500" />}
-          />
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Partida</TableHead>
+                <TableHead>Fecha de Cierre</TableHead>
+                <TableHead>Presupuesto inicial</TableHead>
+                <TableHead>Ubicación</TableHead>
+                <TableHead>Fecha de Inicio</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bids.map((bid) => (
+                <TableRow key={bid.id}>
+                  <TableCell>{bid.partida}</TableCell>
+                  <TableCell>{new Date(bid.publication_end_date).toLocaleDateString()}</TableCell>
+                  <TableCell>${bid.initial_budget.toLocaleString()}</TableCell>
+                  <TableCell>{bid.location}</TableCell>
+                  <TableCell>{new Date(bid.job_start_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => router.push(`/licitacion/${bid.id}`)}>
+                      Ver detalle y cotizar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </main>
 
@@ -50,98 +97,7 @@ export default function Home() {
           <p>&copy; 2024 Licibit. Todos los derechos reservados.</p>
         </div>
       </footer>
+      <Toaster />
     </div>
-  )
-}
-
-interface FeatureCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-}
-
-function FeatureCard({ title, description, icon }: FeatureCardProps) {
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <div className="flex justify-center mb-4">
-        {icon}
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
-      <p className="text-gray-600">{description}</p>
-    </div>
-  )
-}
-
-interface IconProps extends React.SVGProps<SVGSVGElement> {}
-
-function BuildingIcon(props: IconProps) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-      <path d="M9 22v-4h6v4" />
-      <path d="M8 6h.01" />
-      <path d="M16 6h.01" />
-      <path d="M12 6h.01" />
-      <path d="M12 10h.01" />
-      <path d="M12 14h.01" />
-      <path d="M16 10h.01" />
-      <path d="M16 14h.01" />
-      <path d="M8 10h.01" />
-      <path d="M8 14h.01" />
-    </svg>
-  )
-}
-
-function ToolsIcon(props: IconProps) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 22v-5l5-5 5 5-5 5z" />
-      <path d="M16 3h5v5" />
-      <path d="M21 3l-9 9" />
-      <path d="M10 14 4.9 3.9" />
-      <path d="M10 14 3 21" />
-    </svg>
-  )
-}
-
-function ChartIcon(props: IconProps) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v18h18" />
-      <path d="m19 9-5 5-4-4-3 3" />
-    </svg>
   )
 }
