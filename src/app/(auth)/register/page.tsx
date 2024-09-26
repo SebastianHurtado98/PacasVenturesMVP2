@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../../../lib/supabaseClient'
 import MultiSelectDropdown from '../../components/MultiSelectDropdown'
 import { specializations } from '../../utils/specializations'
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "@/hooks/use-toast"
 
 export default function Register() {
   const router = useRouter()
@@ -19,6 +21,7 @@ export default function Register() {
     specializations: [] as string[],
     userType: '',
   })
+  const [error, setError] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -34,10 +37,41 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the data to your backend
-    console.log(formData)
-    // Redirect to login page after successful registration
-    router.push('/login')
+    setError(null) // Clear any previous errors
+
+    try {
+      const { data, error: supabaseError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            phone: formData.phone,
+            company_name: formData.companyName,
+            ruc: formData.ruc,
+            specializations: formData.specializations,
+            user_type: formData.userType,
+          }
+        }
+      })
+
+      if (supabaseError) {
+        throw supabaseError
+      }
+
+      toast({
+        title: "Registro exitoso",
+        description: "Ya puedes entrar a la plataforma.",
+      })
+
+      router.push('/login')
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Ha ocurrido un error desconocido durante el registro')
+      }
+    }
   }
 
   return (
@@ -168,6 +202,12 @@ export default function Register() {
                 selectedOptions={formData.specializations}
                 onChange={handleSpecializationsChange}
               />
+            </div>
+          )}
+
+          {error && (
+            <div className="text-red-500 text-sm">
+              {error}
             </div>
           )}
 

@@ -1,10 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from '@/components/AuthProvider'
+import { useSupabase } from '@/components/supabase-provider'
 
 export default function CrearLicitacion() {
   const router = useRouter()
+  const { supabase } = useSupabase()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     fechaCierre: '',
     partida: '',
@@ -14,17 +24,122 @@ export default function CrearLicitacion() {
     fechaInicioTrabajo: '',
     informacionAdicional: '',
   })
+  const [file, setFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  useEffect(() => {
+    if (user === null) {
+      toast({
+        title: "No has iniciado sesión",
+        description: "Debes iniciar sesión para crear una licitación.",
+        variant: "destructive",
+      })
+      router.push('/login')
+    } else {
+      setIsLoading(false)
+    }
+  }, [user, router, toast])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSelectChange = (value: string) => {
+    setFormData({ ...formData, partida: value })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFile(e.target.files[0])
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the data to your backend
-    console.log(formData)
-    // Redirect to the dashboard after successful creation
-    router.push('/constructora')
+    setIsSubmitting(true)
+
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión para crear una licitación.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
+    try {
+      let file_id = null
+
+      if (file) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Math.random()}.${fileExt}`
+        const filePath = `uploads/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('bid_files')
+          .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from('bid_files')
+          .getPublicUrl(filePath)
+
+        if (!publicUrlData) throw new Error('Failed to get public URL')
+
+        const { data: fileData, error: fileError } = await supabase
+          .from('bid_doc')
+          .insert({
+            file_name: file.name,
+            file_path: publicUrlData.publicUrl,
+          })
+          .select()
+
+        if (fileError) throw fileError
+
+        file_id = fileData[0].id
+      }
+
+      const { error: bidError } = await supabase
+        .from('bid')
+        .insert([
+          {
+            user_id: user.id,
+            active: true,
+            partida: formData.partida,
+            publication_end_date: formData.fechaCierre,
+            location: formData.lugar,
+            initial_budget: formData.presupuestoInicial,
+            job_technical_specs: formData.especificacionesTecnicas,
+            job_start_date: formData.fechaInicioTrabajo,
+            job_details: formData.informacionAdicional,
+            file_id: file_id,
+          }
+        ])
+
+      if (bidError) throw bidError
+
+      toast({
+        title: "Licitación creada",
+        description: "La licitación se ha creado correctamente.",
+      })
+      router.push('/constructora')
+    } catch (error) {
+      console.error('Error al crear la licitación:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear la licitación. Por favor, inténtelo de nuevo.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Cargando...</div>
   }
 
   return (
@@ -35,12 +150,11 @@ export default function CrearLicitacion() {
           <label htmlFor="fechaCierre" className="block text-sm font-medium text-gray-700">
             Fecha de cierre de licitación
           </label>
-          <input
+          <Input
             type="date"
             id="fechaCierre"
             name="fechaCierre"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.fechaCierre}
             onChange={handleChange}
           />
@@ -49,30 +163,26 @@ export default function CrearLicitacion() {
           <label htmlFor="partida" className="block text-sm font-medium text-gray-700">
             Partida
           </label>
-          <select
-            id="partida"
-            name="partida"
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            value={formData.partida}
-            onChange={handleChange}
-          >
-            <option value="">Selecciona una partida</option>
-            <option value="electricidad">Electricidad</option>
-            <option value="plomeria">Plomería</option>
-            <option value="carpinteria">Carpintería</option>
-          </select>
+          <Select onValueChange={handleSelectChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una partida" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="electricidad">Electricidad</SelectItem>
+              <SelectItem value="plomeria">Plomería</SelectItem>
+              <SelectItem value="carpinteria">Carpintería</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label htmlFor="lugar" className="block text-sm font-medium text-gray-700">
             Lugar
           </label>
-          <input
+          <Input
             type="text"
             id="lugar"
             name="lugar"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.lugar}
             onChange={handleChange}
           />
@@ -81,11 +191,10 @@ export default function CrearLicitacion() {
           <label htmlFor="presupuestoInicial" className="block text-sm font-medium text-gray-700">
             Presupuesto inicial (opcional)
           </label>
-          <input
+          <Input
             type="number"
             id="presupuestoInicial"
             name="presupuestoInicial"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.presupuestoInicial}
             onChange={handleChange}
           />
@@ -94,26 +203,24 @@ export default function CrearLicitacion() {
           <label htmlFor="especificacionesTecnicas" className="block text-sm font-medium text-gray-700">
             Especificaciones técnicas
           </label>
-          <textarea
+          <Textarea
             id="especificacionesTecnicas"
             name="especificacionesTecnicas"
             rows={4}
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.especificacionesTecnicas}
             onChange={handleChange}
-          ></textarea>
+          />
         </div>
         <div>
           <label htmlFor="fechaInicioTrabajo" className="block text-sm font-medium text-gray-700">
             Fecha de inicio de trabajo
           </label>
-          <input
+          <Input
             type="date"
             id="fechaInicioTrabajo"
             name="fechaInicioTrabajo"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.fechaInicioTrabajo}
             onChange={handleChange}
           />
@@ -122,22 +229,29 @@ export default function CrearLicitacion() {
           <label htmlFor="informacionAdicional" className="block text-sm font-medium text-gray-700">
             Información adicional
           </label>
-          <textarea
+          <Textarea
             id="informacionAdicional"
             name="informacionAdicional"
             rows={4}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             value={formData.informacionAdicional}
             onChange={handleChange}
-          ></textarea>
+          />
         </div>
         <div>
-          <button
-            type="submit"
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Crear Licitación
-          </button>
+          <label htmlFor="documento" className="block text-sm font-medium text-gray-700">
+            Adjuntar documento
+          </label>
+          <Input
+            type="file"
+            id="documento"
+            name="documento"
+            onChange={handleFileChange}
+          />
+        </div>
+        <div>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creando...' : 'Crear Licitación'}
+          </Button>
         </div>
       </form>
     </div>

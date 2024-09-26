@@ -2,37 +2,75 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Login() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    userType: '',
-  })
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  const { toast } = useToast()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically authenticate the user
-    console.log(formData)
-    // Redirect based on user type
-    switch (formData.userType) {
-      case 'constructora':
-        router.push('/constructora')
-        break
-      case 'proveedor':
-        router.push('/proveedor')
-        break
-      case 'admin':
-        router.push('/admin')
-        break
-      default:
-        // Handle error or redirect to a default page
-        break
+    setIsLoading(true)
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        throw error
+      }
+
+
+      if (data.user) {
+        
+        const userType = data.user.user_metadata.user_type;
+
+        if (!userType) {
+          throw new Error('User type not found in metadata');
+        }
+
+        if (userType === 'constructora') {
+          router.push('/constructora')
+        } else if (userType === 'proveedor') {
+          router.push('/proveedor')
+        } else if (userType == 'admin') {
+          router.push('/admin')
+        } 
+        else {
+          throw new Error('Invalid user type')
+        }
+        } else {
+          throw new Error('User profile not found')
+        }
+
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Bienvenido de vuelta!",
+      })
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Error en el inicio de sesión",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error en el inicio de sesión",
+          description: "Ha ocurrido un error desconocido",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -43,13 +81,12 @@ export default function Login() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Iniciar sesión</h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <input type="hidden" name="remember" defaultValue="true" />
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Correo electrónico
               </label>
-              <input
+              <Input
                 id="email-address"
                 name="email"
                 type="email"
@@ -57,53 +94,36 @@ export default function Login() {
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Correo electrónico"
-                value={formData.email}
-                onChange={handleChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
                 Contraseña
               </label>
-              <input
+              <Input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Contraseña"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="user-type" className="sr-only">
-                Tipo de usuario
-              </label>
-              <select
-                id="user-type"
-                name="userType"
-                required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                value={formData.userType}
-                onChange={handleChange}
-              >
-                <option value="">Selecciona tipo de usuario</option>
-                <option value="constructora">Constructora</option>
-                <option value="proveedor">Proveedor</option>
-                <option value="admin">Admin</option>
-              </select>
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
           </div>
 
           <div>
-            <button
+            <Button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
             >
-              Iniciar sesión
-            </button>
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            </Button>
           </div>
         </form>
       </div>
