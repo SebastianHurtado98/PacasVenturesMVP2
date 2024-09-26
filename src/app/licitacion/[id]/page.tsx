@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
-import Link from 'next/link'
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 import { useSupabase } from '@/components/supabase-provider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from '@/components/AuthProvider'
 import CountdownTimer from '@/components/CountdownTimer'
+import { AuthModal } from '@/components/AuthModal'
 
 interface Proposal {
   id: number;
@@ -71,6 +71,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const [proposalFile, setProposalFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProposalsOpen, setIsProposalsOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state' | 'file_id'>>({
     budget: 0,
     delivery_time: '',
@@ -228,9 +229,13 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
     }
   };
 
+  const handleAuthSuccess = () => {
+    setIsAuthModalOpen(false);
+    window.location.reload(); // Recarga la página después de un inicio de sesión exitoso
+  };
+
   if (isLoading) return <div className="text-center py-10">Cargando...</div>;
   if (!licitacion) return <div className="text-center py-10">No se encontró la licitación</div>;
-
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">{licitacion.project_name}</h1>
@@ -416,12 +421,15 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         ) : (
           <div>
             <p>Inicia sesión para enviar propuestas</p>
-            <Link href="/login">
-              <Button>Iniciar Sesión</Button>
-            </Link>
+            <Button onClick={() => setIsAuthModalOpen(true)}>Iniciar Sesión / Registrarse</Button>
           </div>
         )}
       </div>
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
       <Toaster />
     </div>
   )

@@ -140,7 +140,6 @@ export default function Home() {
                   {' '}
                   (<CountdownTimer endDate={bid.publication_end_date} />)
                 </p>
-                <p><strong>Presupuesto inicial:</strong> ${bid.initial_budget.toLocaleString()}</p>
                 <p><strong>Ubicación:</strong> {bid.location}</p>
                 <p><strong>Fecha de Inicio:</strong> {new Date(bid.job_start_date).toLocaleDateString()}</p>
               </CardContent>
