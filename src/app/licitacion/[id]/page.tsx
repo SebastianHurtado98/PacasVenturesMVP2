@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useSupabase } from '@/components/supabase-provider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
@@ -16,13 +16,15 @@ interface Proposal {
   id: number;
   user_id: string;
   bid_id: number;
-  budget: number;
   state: 'accepted' | 'rejected' | 'pending' | 'sent';
-  delivery_time: string;
-  payment_method: string;
-  guarantee: string;
   extra_info: string;
-  file_id: number | null;
+}
+
+interface ProposalFileInfo {
+  id: number;
+  proposal_id: number;
+  file_name: string;
+  file_path: string;
 }
 
 interface Licitacion {
@@ -68,11 +70,11 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const [bidLinks, setBidLinks] = useState<LinkInfo[]>([]);
   const [bidSignedUrls, setBidSignedUrls] = useState<{ [key: number]: string }>({});
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [proposalFile, setProposalFile] = useState<File | null>(null);
+  const [proposalFiles, setProposalFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProposalsOpen, setIsProposalsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state' | 'file_id'>>({extra_info: ''});
+  const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state'>>({extra_info: ''});
 
   useEffect(() => {
     const fetchLicitacionAndProposals = async () => {
@@ -142,9 +144,13 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   }, [supabase, params.id, toast]);
 
   const handleProposalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProposalFile(e.target.files[0]);
+    if (e.target.files) {
+      setProposalFiles(prevFiles => [...prevFiles, ...Array.from(e.target.files || [])]);
     }
+  };
+
+  const removeProposalFile = (index: number) => {
+    setProposalFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
   };
 
   const handleProposalSubmit = async (e: React.FormEvent) => {
@@ -159,25 +165,6 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
     }
 
     try {
-      let file_id = null;
-      if (proposalFile) {
-        const fileName = `${Date.now()}_${proposalFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('proposal_files')
-          .upload(fileName, proposalFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: fileData, error: fileError } = await supabase
-          .from('proposal_doc')
-          .insert({ file_name: proposalFile.name, file_path: uploadData.path })
-          .select()
-          .single();
-
-        if (fileError) throw fileError;
-        file_id = fileData.id;
-      }
-
       const { data: proposalData, error: proposalError } = await supabase
         .from('proposal')
         .insert({
@@ -185,12 +172,30 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
           user_id: user.id,
           bid_id: licitacion.id,
           state: 'sent',
-          file_id,
         })
         .select()
         .single();
 
       if (proposalError) throw proposalError;
+
+      for (const file of proposalFiles) {
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('proposal_files')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { error: fileError } = await supabase
+          .from('proposal_doc')
+          .insert({ 
+            proposal_id: proposalData.id,
+            file_name: file.name, 
+            file_path: uploadData.path 
+          });
+
+        if (fileError) throw fileError;
+      }
 
       setProposals([...proposals, proposalData]);
 
@@ -199,7 +204,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         description: "Tu propuesta ha sido enviada exitosamente.",
       });
 
-      router.push('/proveedor/cotizaciones');
+      router.push('/mis-cotizaciones');
 
     } catch (error) {
       console.error('Error submitting proposal:', error);
@@ -217,19 +222,22 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
   const handleWhatsAppQuestion = () => {
     if (licitacion) {
-      const message = encodeURIComponent(`Hola! Vi la licitación #${licitacion.id} en Licibit y me gustaría hacer una pregunta: `);
-      const whatsappUrl = `https://wa.me/51970748423?text=${message}`;
+      const message = encodeURIComponent(`¡Hola! Tengo una consulta sobre la siguiente licitación en Licibit: https://pacas-ventures-mvp-2.vercel.app/licitacion/${licitacion.id}`);
+      const whatsappUrl = `https://wa.me/51991124187?text=${message}`;
       window.open(whatsappUrl, '_blank');
     }
   };
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
-    window.location.reload(); // Recarga la página después de un inicio de sesión exitoso
+    window.location.reload();
   };
 
   if (isLoading) return <div className="text-center py-10">Cargando...</div>;
   if (!licitacion) return <div className="text-center py-10">No se encontró la licitación</div>;
+
+  const isActive = licitacion.active && new Date(licitacion.publication_end_date) > new Date();
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">{licitacion.project_name}</h1>
@@ -251,8 +259,8 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-gray-600">Status</p>
-            <p className="font-semibold">{licitacion.active ? 'Activo' : 'Inactivo'}</p>
+            <p className="text-gray-600">Estado</p>
+            <p className="font-semibold">{isActive ? 'Activa' : 'Inactiva'}</p>
           </div>
           <div>
             <p className="text-gray-600">Partida</p>
@@ -276,7 +284,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
           </div>
         </div>
         <div className="mt-6">
-          <p className="text-gray-600">Detalle del requerimiento</p>
+          <p className="text-gray-600">Detalles del requerimiento</p>
           <p className="mt-2">{licitacion.job_technical_specs}</p>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4">
@@ -325,33 +333,61 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
       <div className="bg-white shadow-md rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Enviar Nueva Propuesta</h2>
         {user ? (
-          <form onSubmit={handleProposalSubmit}>
-            <div className="mb-4">
-              <label htmlFor="extra_info" className="block text-sm font-medium text-gray-700">
-                Comentarios
-              </label>
-              <textarea
-                id="extra_info"
-                value={newProposal.extra_info}
-                onChange={(e) => setNewProposal({...newProposal, extra_info: e.target.value})}
-                rows={4}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="proposal-pdf" className="block text-sm font-medium text-gray-700">
-                Documento de la propuesta (PDF)
-              </label>
-              <input
-                type="file"
-                id="proposal-pdf"
-                accept=".pdf"
-                onChange={handleProposalFileChange}
-                className="mt-1 block w-full"
-              />
-            </div>
-            <Button type="submit">Enviar Propuesta</Button>
-          </form>
+          isActive ? (
+            <form onSubmit={handleProposalSubmit}>
+              <div className="mb-4">
+                <label htmlFor="extra_info" className="block text-sm font-medium text-gray-700">
+                  Comentarios
+                </label>
+                <textarea
+                  id="extra_info"
+                  value={newProposal.extra_info}
+                  onChange={(e) => setNewProposal({...newProposal, extra_info: e.target.value})}
+                  rows={4}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="proposal-files" className="block text-sm font-medium text-gray-700">
+                  Archivos de la propuesta
+                </label>
+                <div className="mt-1 flex items-center">
+                  <input
+                    type="file"
+                    id="proposal-files"
+                    onChange={handleProposalFileChange}
+                    className="hidden"
+                    multiple
+                  />
+                  <label
+                    htmlFor="proposal-files"
+                    className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <PlusIcon className="h-5 w-5 inline-block mr-2" />
+                    Agregar archivo
+                  </label>
+                </div>
+                <div className="mt-2">
+                  {proposalFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded-md mb-2">
+                      <span className="text-sm text-gray-600">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeProposalFile(index)}
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Button type="submit">Enviar Propuesta</Button>
+            </form>
+          ) : (
+            <p className="text-red-500">Esta licitación ya no está activa. No se pueden enviar propuestas.</p>
+          )
         ) : (
           <div>
             <p>Inicia sesión para enviar propuestas</p>

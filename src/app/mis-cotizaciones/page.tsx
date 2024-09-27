@@ -7,24 +7,33 @@ import { useSupabase } from '@/components/supabase-provider'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 
 type ProposalState = 'sent' | 'accepted' | 'rejected'
 
 interface Bid {
+  id: number
   partida: string
+  project_name: string
+  user: {
+    enterprise_name: string
+  }
 }
 
 interface Proposal {
   id: number
   bid_id: number
-  budget: number
   state: ProposalState
   created_at: string
-  delivery_time: string
-  payment_method: string
-  guarantee: string
-  file_id: number | null
+  extra_info: string
   bid: Bid
+}
+
+interface ProposalFileInfo {
+  id: number;
+  proposal_id: number;
+  file_name: string;
+  file_path: string;
 }
 
 export default function MisCotizaciones() {
@@ -33,6 +42,8 @@ export default function MisCotizaciones() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [proposals, setProposals] = useState<Proposal[]>([])
+  const [expandedRows, setExpandedRows] = useState<number[]>([])
+  const [proposalFiles, setProposalFiles] = useState<{[key: number]: ProposalFileInfo[]}>({})
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -46,17 +57,14 @@ export default function MisCotizaciones() {
         const { data, error } = await supabase
           .from('proposal')
           .select(`
-            id,
-            bid_id,
-            budget,
-            state,
-            created_at,
-            delivery_time,
-            payment_method,
-            guarantee,
-            file_id,
+            *,
             bid (
-              partida
+              id,
+              project_name,
+              partida,
+              user (
+                enterprise_name
+              )
             )
           `)
           .order('created_at', { ascending: false })
@@ -69,6 +77,22 @@ export default function MisCotizaciones() {
             bid: Array.isArray(item.bid) ? item.bid[0] : item.bid
           }))
           setProposals(typedProposals)
+
+          // Fetch files for all proposals
+          const filesPromises = typedProposals.map(proposal => 
+            supabase
+              .from('proposal_file_info')
+              .select('*')
+              .eq('proposal_id', proposal.id)
+          )
+          const filesResults = await Promise.all(filesPromises)
+          const filesMap: {[key: number]: ProposalFileInfo[]} = {}
+          filesResults.forEach((result, index) => {
+            if (result.data) {
+              filesMap[typedProposals[index].id] = result.data
+            }
+          })
+          setProposalFiles(filesMap)
         }
       } catch (error) {
         console.error('Error fetching proposals:', error)
@@ -85,34 +109,24 @@ export default function MisCotizaciones() {
     fetchProposals()
   }, [supabase, toast, user])
 
-  const handleFileDownload = async (fileId: number) => {
+  const handleFileDownload = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase
-        .from('proposal_doc')
-        .select('file_path, file_name')
-        .eq('id', fileId)
-        .single()
+        .storage
+        .from('proposal_files')
+        .download(filePath)
 
       if (error) throw error
 
-      if (data) {
-        const { data: fileData, error: downloadError } = await supabase
-          .storage
-          .from('proposal_files')
-          .download(data.file_path)
-
-        if (downloadError) throw downloadError
-
-        const blob = new Blob([fileData], { type: 'application/octet-stream' })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.style.display = 'none'
-        a.href = url
-        a.download = data.file_name
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      const blob = new Blob([data], { type: 'application/octet-stream' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading file:', error)
       toast({
@@ -121,6 +135,18 @@ export default function MisCotizaciones() {
         variant: "destructive",
       })
     }
+  }
+
+  const toggleRowExpansion = (proposalId: number) => {
+    setExpandedRows(prevExpandedRows => 
+      prevExpandedRows.includes(proposalId)
+        ? prevExpandedRows.filter(id => id !== proposalId)
+        : [...prevExpandedRows, proposalId]
+    )
+  }
+
+  const navigateToLicitacionDetail = (bidId: number) => {
+    router.push(`/licitacion/${bidId}`)
   }
 
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
@@ -144,46 +170,76 @@ export default function MisCotizaciones() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Licitación</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Envío</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plazo de Entrega</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método de Pago</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Garantía</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {proposals.map((proposal) => (
-              <tr key={proposal.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.partida}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{new Date(proposal.created_at).toLocaleDateString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap">${proposal.budget.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    proposal.state === 'accepted' ? 'bg-green-100 text-green-800' :
-                    proposal.state === 'rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {proposal.state === 'sent' ? 'Enviada' :
-                     proposal.state === 'accepted' ? 'Aceptada' :
-                     'Rechazada'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{proposal.delivery_time}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{proposal.payment_method}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{proposal.guarantee}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {proposal.file_id ? (
-                    <Button size="sm" onClick={() => handleFileDownload(proposal.file_id!)}>
-                      Descargar
+              <>
+                <tr key={proposal.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleRowExpansion(proposal.id)}
+                    >
+                      {expandedRows.includes(proposal.id) ? (
+                        <ChevronUpIcon className="h-4 w-4" />
+                      ) : (
+                        <ChevronDownIcon className="h-4 w-4" />
+                      )}
                     </Button>
-                  ) : (
-                    <span className="text-gray-400">Sin archivo</span>
-                  )}
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.partida}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{new Date(proposal.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      proposal.state === 'accepted' ? 'bg-green-100 text-green-800' :
+                      proposal.state === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {proposal.state === 'sent' ? 'Enviada' :
+                       proposal.state === 'accepted' ? 'Aceptada' :
+                       'Rechazada'}
+                    </span>
+                  </td>
+                </tr>
+                {expandedRows.includes(proposal.id) && (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-4 bg-gray-50">
+                      <div className="mb-4">
+                        <h4 className="font-semibold mb-2">Archivos adjuntos:</h4>
+                        {proposalFiles[proposal.id] && proposalFiles[proposal.id].length > 0 ? (
+                          <ul className="list-disc pl-5">
+                            {proposalFiles[proposal.id].map((file) => (
+                              <li key={file.id} className="mb-2">
+                                <Button
+                                  variant="link"
+                                  onClick={() => handleFileDownload(file.file_path, file.file_name)}
+                                >
+                                  {file.file_name}
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>No hay archivos adjuntos</p>
+                        )}
+                      </div>
+                      <div className="mb-4">
+                        <h4 className="font-semibold mb-2">Comentario:</h4>
+                        <p>{proposal.extra_info || 'Sin comentarios'}</p>
+                      </div>
+                      <Button onClick={() => navigateToLicitacionDetail(proposal.bid.id)}>
+                        Ver detalle de la licitación
+                      </Button>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>

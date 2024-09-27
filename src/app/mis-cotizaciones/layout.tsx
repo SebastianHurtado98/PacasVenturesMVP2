@@ -48,7 +48,7 @@ export default function ProveedorLayout({
               </Link>
             </li>
             <li>
-              <Link href="/proveedor/cotizaciones" className="text-blue-600 hover:underline">
+              <Link href="/mis-cotizaciones" className="text-blue-600 hover:underline">
                 Mis Cotizaciones
               </Link>
             </li>
