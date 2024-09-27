@@ -114,7 +114,7 @@ export default function Home() {
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
+    <div className="min-h-screen">
       <main className="container mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
           Licitaciones
@@ -197,12 +197,6 @@ export default function Home() {
           })}
         </div>
       </main>
-
-      <footer className="bg-gray-100 mt-16 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>&copy; 2024 Licibit. Todos los derechos reservados.</p>
-        </div>
-      </footer>
       <Toaster />
     </div>
   )

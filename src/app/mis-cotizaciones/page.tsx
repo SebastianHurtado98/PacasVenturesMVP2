@@ -7,7 +7,7 @@ import { useSupabase } from '@/components/supabase-provider'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from 'lucide-react'
 
 type ProposalState = 'sent' | 'accepted' | 'rejected'
 
@@ -67,6 +67,7 @@ export default function MisCotizaciones() {
               )
             )
           `)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -76,12 +77,12 @@ export default function MisCotizaciones() {
             ...item,
             bid: Array.isArray(item.bid) ? item.bid[0] : item.bid
           }))
-          setProposals(typedProposals)
+          setProposals(typedProposals) 
 
           // Fetch files for all proposals
           const filesPromises = typedProposals.map(proposal => 
             supabase
-              .from('proposal_file_info')
+              .from('proposal_doc')
               .select('*')
               .eq('proposal_id', proposal.id)
           )
@@ -109,29 +110,23 @@ export default function MisCotizaciones() {
     fetchProposals()
   }, [supabase, toast, user])
 
-  const handleFileDownload = async (filePath: string, fileName: string) => {
+  const handleFileOpen = async (filePath: string, fileName: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .storage
         .from('proposal_files')
-        .download(filePath)
-
-      if (error) throw error
-
-      const blob = new Blob([data], { type: 'application/octet-stream' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.style.display = 'none'
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
+        .getPublicUrl(filePath)
+  
+      if (data?.publicUrl) {
+        window.open(data.publicUrl, '_blank')
+      } else {
+        throw new Error('No se pudo obtener la URL pública del archivo')
+      }
     } catch (error) {
-      console.error('Error downloading file:', error)
+      console.error('Error opening file:', error)
       toast({
         title: "Error",
-        description: "No se pudo descargar el archivo. Por favor, intenta de nuevo.",
+        description: "No se pudo abrir el archivo. Por favor, intenta de nuevo.",
         variant: "destructive",
       })
     }
@@ -171,7 +166,9 @@ export default function MisCotizaciones() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Licitación</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partida</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proyecto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Envío</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
             </tr>
@@ -194,6 +191,8 @@ export default function MisCotizaciones() {
                     </Button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.partida}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.user.enterprise_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.project_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{new Date(proposal.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -218,9 +217,11 @@ export default function MisCotizaciones() {
                               <li key={file.id} className="mb-2">
                                 <Button
                                   variant="link"
-                                  onClick={() => handleFileDownload(file.file_path, file.file_name)}
+                                  onClick={() => handleFileOpen(file.file_path, file.file_name)}
+                                  className="flex items-center"
                                 >
                                   {file.file_name}
+                                  <ExternalLinkIcon className="ml-2 h-4 w-4" />
                                 </Button>
                               </li>
                             ))}
