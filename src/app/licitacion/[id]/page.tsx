@@ -72,13 +72,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const [isLoading, setIsLoading] = useState(true);
   const [isProposalsOpen, setIsProposalsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state' | 'file_id'>>({
-    budget: 0,
-    delivery_time: '',
-    payment_method: '',
-    guarantee: '',
-    extra_info: '',
-  });
+  const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state' | 'file_id'>>({extra_info: ''});
 
   useEffect(() => {
     const fetchLicitacionAndProposals = async () => {
@@ -224,7 +218,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const handleWhatsAppQuestion = () => {
     if (licitacion) {
       const message = encodeURIComponent(`Hola! Vi la licitación #${licitacion.id} en Licibit y me gustaría hacer una pregunta: `);
-      const whatsappUrl = `https://wa.me/51991124187?text=${message}`;
+      const whatsappUrl = `https://wa.me/51970748423?text=${message}`;
       window.open(whatsappUrl, '_blank');
     }
   };
@@ -277,21 +271,13 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
             <p className="font-semibold">{licitacion.location}</p>
           </div>
           <div>
-            <p className="text-gray-600">Presupuesto inicial</p>
-            <p className="font-semibold">${licitacion.initial_budget.toLocaleString()}</p>
-          </div>
-          <div>
             <p className="text-gray-600">Fecha de inicio de trabajo</p>
             <p className="font-semibold">{new Date(licitacion.job_start_date).toLocaleDateString()}</p>
           </div>
         </div>
         <div className="mt-6">
-          <p className="text-gray-600">Especificaciones técnicas</p>
+          <p className="text-gray-600">Detalle del requerimiento</p>
           <p className="mt-2">{licitacion.job_technical_specs}</p>
-        </div>
-        <div className="mt-6">
-          <p className="text-gray-600">Información adicional</p>
-          <p className="mt-2">{licitacion.job_details}</p>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4">
           <div>
@@ -301,7 +287,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
                 <div key={file.id} className="mt-2">
                   {bidSignedUrls[file.id] ? (
                     <Button asChild className="w-full mb-2">
-                      <a href={bidSignedUrls[file.id]} download={file.file_name}>
+                      <a href={bidSignedUrls[file.id]} download={file.file_name} target="_blank">
                         Descargar {file.file_name}
                       </a>
                     </Button>
@@ -341,60 +327,8 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         {user ? (
           <form onSubmit={handleProposalSubmit}>
             <div className="mb-4">
-              <label htmlFor="budget" className="block text-sm font-medium text-gray-700">
-                Presupuesto
-              </label>
-              <input
-                type="number"
-                id="budget"
-                value={newProposal.budget}
-                onChange={(e) => setNewProposal({...newProposal, budget: parseFloat(e.target.value)})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="delivery_time" className="block text-sm font-medium text-gray-700">
-                Tiempo de entrega
-              </label>
-              <input
-                type="text"
-                id="delivery_time"
-                value={newProposal.delivery_time}
-                onChange={(e) => setNewProposal({...newProposal, delivery_time: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="payment_method" className="block text-sm font-medium text-gray-700">
-                Método de pago
-              </label>
-              <input
-                type="text"
-                id="payment_metho"
-                value={newProposal.payment_method}
-                onChange={(e) => setNewProposal({...newProposal, payment_method: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="guarantee" className="block text-sm font-medium text-gray-700">
-                Garantía
-              </label>
-              <input
-                type="text"
-                id="guarantee"
-                value={newProposal.guarantee}
-                onChange={(e) => setNewProposal({...newProposal, guarantee: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                required
-              />
-            </div>
-            <div className="mb-4">
               <label htmlFor="extra_info" className="block text-sm font-medium text-gray-700">
-                Información Adicional
+                Comentarios
               </label>
               <textarea
                 id="extra_info"
