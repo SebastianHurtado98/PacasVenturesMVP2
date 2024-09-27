@@ -24,14 +24,29 @@ export default function LayoutContent({ children }: LayoutContentProps) {
     <>
       <header className="bg-black text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Licibit</h1>
-          <nav>
-            <Link href="/" className="text-white mr-4 hover:underline">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold">Licibit</h1>
+            {user && (
+              <nav className="space-x-4">
+                <Link href="/constructora/licitaciones" className="text-white hover:underline">
+                  Mis Licitaciones
+                </Link>
+                <Link href="/constructora/proyectos" className="text-white hover:underline">
+                  Mis Proyectos
+                </Link>
+                <Link href="/constructora/usuarios-y-permisos" className="text-white hover:underline">
+                  Usuarios y Permisos
+                </Link>
+              </nav>
+            )}
+          </div>
+          <nav className="flex items-center space-x-4">
+            <Link href="/" className="text-white hover:underline">
               Licitaciones
             </Link>
             {user ? (
               <>
-                <Link href="/mis-cotizaciones" className="text-white mr-4 hover:underline">
+                <Link href="/mis-cotizaciones" className="text-white hover:underline">
                   Mis cotizaciones
                 </Link>
                 <LogoutButton />
