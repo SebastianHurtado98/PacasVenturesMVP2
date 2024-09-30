@@ -6,21 +6,76 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useSupabase } from '@/components/supabase-provider'
+import { useToast } from "@/hooks/use-toast"
+import { Toaster } from "@/components/ui/toaster"
+import { useAuth } from '@/components/AuthProvider'
 
 export default function CrearProyecto() {
-  const [nombre, setNombre] = useState('')
-  const [direccion, setDireccion] = useState('')
-  const [ciudad, setCiudad] = useState('')
-  const [departamento, setDepartamento] = useState('')
-  const [descripcion, setDescripcion] = useState('')
+  const [name, setName] = useState('')
+  const [location, setLocation] = useState('')
+  const [city, setCity] = useState('')
+  const [department, setDepartment] = useState('')
+  const [description, setDescription] = useState('')
   const router = useRouter()
+  const { supabase } = useSupabase()
+  const { toast } = useToast()
+  const { user } = useAuth()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the data to your backend
-    // For now, we'll just simulate a successful creation
-    console.log({ nombre, direccion, ciudad, departamento, descripcion })
-    router.push('/constructora/proyectos')
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión para crear un proyecto.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      // First, fetch the user's ID from the custom 'user' table
+      const { data: userData, error: userError } = await supabase
+        .from('user')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (userError) throw userError
+
+      if (!userData) {
+        throw new Error('User not found in the custom user table')
+      }
+
+      // Now create the project with the custom user ID
+      const { data, error } = await supabase
+        .from('project')
+        .insert({
+          name,
+          location,
+          city,
+          department,
+          description,
+          user_id: userData.id // Use the ID from the custom user table
+        })
+        .single()
+
+      if (error) throw error
+
+      toast({
+        title: "Proyecto creado",
+        description: "El proyecto se ha creado exitosamente.",
+      })
+
+      router.push('/constructora/proyectos')
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear el proyecto. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -28,53 +83,54 @@ export default function CrearProyecto() {
       <h1 className="text-2xl font-bold mb-4">Crear Nuevo Proyecto</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="nombre">Nombre del proyecto</Label>
+          <Label htmlFor="name">Nombre del Proyecto/obra</Label>
           <Input
-            id="nombre"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
         <div>
-          <Label htmlFor="direccion">Dirección</Label>
+          <Label htmlFor="location">Dirección</Label>
           <Input
-            id="direccion"
-            value={direccion}
-            onChange={(e) => setDireccion(e.target.value)}
+            id="location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
             required
           />
         </div>
         <div>
-          <Label htmlFor="ciudad">Ciudad</Label>
+          <Label htmlFor="city">Ciudad</Label>
           <Input
-            id="ciudad"
-            value={ciudad}
-            onChange={(e) => setCiudad(e.target.value)}
+            id="city"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
             required
           />
         </div>
         <div>
-          <Label htmlFor="departamento">Departamento</Label>
+          <Label htmlFor="department">Departamento</Label>
           <Input
-            id="departamento"
-            value={departamento}
-            onChange={(e) => setDepartamento(e.target.value)}
+            id="department"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
             required
           />
         </div>
         <div>
-          <Label htmlFor="descripcion">Descripción</Label>
+          <Label htmlFor="description">Descripción</Label>
           <Textarea
-            id="descripcion"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Información como dimensiones, número de etapas, tipo de inmuebles, etc."
             required
           />
         </div>
         <Button type="submit">Crear Proyecto</Button>
       </form>
+      <Toaster />
     </div>
   )
 }

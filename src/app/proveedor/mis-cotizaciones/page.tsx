@@ -14,7 +14,9 @@ type ProposalState = 'sent' | 'accepted' | 'rejected'
 interface Bid {
   id: number
   partida: string
-  project_name: string
+  project: {
+    name: string
+  }
   user: {
     enterprise_name: string
   }
@@ -60,8 +62,10 @@ export default function MisCotizaciones() {
             *,
             bid (
               id,
-              project_name,
               partida,
+              project (
+                name
+              ),
               user (
                 enterprise_name
               )
@@ -192,7 +196,7 @@ export default function MisCotizaciones() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.partida}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.user.enterprise_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.project_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proposal.bid.project.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{new Date(proposal.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

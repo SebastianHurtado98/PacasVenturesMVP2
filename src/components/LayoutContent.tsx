@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
 import { AuthModal } from '@/components/AuthModal'
 import { useAuth } from '@/components/AuthProvider'
+import { useSupabase } from '@/components/supabase-provider'
 
 interface LayoutContentProps {
   children: React.ReactNode
@@ -14,6 +15,30 @@ interface LayoutContentProps {
 export default function LayoutContent({ children }: LayoutContentProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const { user } = useAuth()
+  const { supabase } = useSupabase()
+  const [userType, setUserType] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function getUserType() {
+      if (user) {
+        const { data, error } = await supabase
+          .from('user')
+          .select('user_type')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (error) {
+          console.error('Error fetching user type:', error)
+        } else if (data) {
+          setUserType(data.user_type)
+        }
+      }
+    }
+
+    getUserType()
+  }, [user, supabase])
+
+  console.log("USER", user)
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false)
@@ -26,17 +51,26 @@ export default function LayoutContent({ children }: LayoutContentProps) {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold">Licibit</h1>
-            {user && (
+            {user && userType && (
               <nav className="space-x-4">
-                <Link href="/constructora/licitaciones" className="text-white hover:underline">
-                  Mis Licitaciones
-                </Link>
-                <Link href="/constructora/proyectos" className="text-white hover:underline">
-                  Mis Proyectos
-                </Link>
-                <Link href="/constructora/usuarios-y-permisos" className="text-white hover:underline">
-                  Usuarios y Permisos
-                </Link>
+                {userType === 'constructora' && (
+                  <>
+                    <Link href="/constructora/licitaciones" className="text-white hover:underline">
+                      Mis Licitaciones
+                    </Link>
+                    <Link href="/constructora/proyectos" className="text-white hover:underline">
+                      Mis Proyectos
+                    </Link>
+                    <Link href="/constructora/usuarios-y-permisos" className="text-white hover:underline">
+                      Usuarios y Permisos
+                    </Link>
+                  </>
+                )}
+                {userType === 'proveedor' && (
+                  <Link href="proveedor/mis-cotizaciones" className="text-white hover:underline">
+                    Mis Cotizaciones
+                  </Link>
+                )}
               </nav>
             )}
           </div>
@@ -45,12 +79,7 @@ export default function LayoutContent({ children }: LayoutContentProps) {
               Licitaciones
             </Link>
             {user ? (
-              <>
-                <Link href="/mis-cotizaciones" className="text-white hover:underline">
-                  Mis cotizaciones
-                </Link>
-                <LogoutButton />
-              </>
+              <LogoutButton />
             ) : (
               <Button 
                 className="text-black hover:bg-gray-200 bg-white"

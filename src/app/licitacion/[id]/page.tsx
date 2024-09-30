@@ -37,10 +37,13 @@ interface Licitacion {
   job_technical_specs: string;
   job_start_date: string;
   job_details: string;
-  project_name: string;
+  project: {
+    name: string,
+    location: string,
+  };
   created_at: string;
   company_logo: string;
-  main_description: string;
+  description: string;
   user: {
     enterprise_name: string;
   };
@@ -65,6 +68,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const { supabase } = useSupabase();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [userType, setUserType] = useState<string | null>(null);
   const [licitacion, setLicitacion] = useState<Licitacion | null>(null);
   const [bidFiles, setBidFiles] = useState<FileInfo[]>([]);
   const [bidLinks, setBidLinks] = useState<LinkInfo[]>([]);
@@ -75,6 +79,35 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const [isProposalsOpen, setIsProposalsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state'>>({extra_info: ''});
+  const [userDataLoaded, setUserDataLoaded] = useState(false);
+
+  console.log("User outside useEffect:", user);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('user')
+            .select('user_type')
+            .eq('auth_user_id', user.id)
+            .single();
+        
+          if (userError) throw userError;
+          setUserType(userData.user_type);
+          console.log("User type", userData.user_type);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        } finally {
+          setUserDataLoaded(true);
+        }
+      } else {
+        setUserDataLoaded(true);
+      }
+    };
+
+    fetchUserData();
+  }, [user, supabase]);
 
   useEffect(() => {
     const fetchLicitacionAndProposals = async () => {
@@ -83,6 +116,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
           .from('bid')
           .select(`
             *,
+            project (name, location),
             user (enterprise_name)
           `)
           .eq('id', params.id)
@@ -90,6 +124,8 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
         if (licitacionError) throw licitacionError;
         setLicitacion(licitacionData);
+
+        console.log("User inside fetchLicitacionAndProposals:", user);
 
         const { data: filesData, error: filesError } = await supabase
           .from('bid_doc')
@@ -140,8 +176,10 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
       }
     };
 
-    fetchLicitacionAndProposals();
-  }, [supabase, params.id, toast]);
+    if (userDataLoaded) {
+      fetchLicitacionAndProposals();
+    }
+  }, [supabase, params.id, toast, userDataLoaded, user]);
 
   const handleProposalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -204,7 +242,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         description: "Tu propuesta ha sido enviada exitosamente.",
       });
 
-      router.push('/mis-cotizaciones');
+      router.push('/proveedor/mis-cotizaciones');
 
     } catch (error) {
       console.error('Error submitting proposal:', error);
@@ -240,8 +278,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">{licitacion.project_name}</h1>
-      <h2 className="text-xl font-semibold mb-4">{licitacion.main_description}</h2>
+      <h1 className="text-3xl font-bold mb-6">{licitacion.project.name}</h1>
       <div className="bg-white shadow-md rounded-lg p-6 mb-6">
         <div className="flex items-center mb-4">
           <div className="w-16 h-16 relative mr-4">
@@ -276,7 +313,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
           </div>
           <div>
             <p className="text-gray-600">Lugar</p>
-            <p className="font-semibold">{licitacion.location}</p>
+            <p className="font-semibold">{licitacion.project.location}</p>
           </div>
           <div>
             <p className="text-gray-600">Fecha de inicio de trabajo</p>
@@ -285,7 +322,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
         <div className="mt-6">
           <p className="text-gray-600">Detalles del requerimiento</p>
-          <p className="mt-2">{licitacion.job_technical_specs}</p>
+          <p className="mt-2">{licitacion.description}</p>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4">
           <div>
@@ -330,71 +367,73 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Enviar Nueva Propuesta</h2>
-        {user ? (
-          isActive ? (
-            <form onSubmit={handleProposalSubmit}>
-              <div className="mb-4">
-                <label htmlFor="extra_info" className="block text-sm font-medium text-gray-700">
-                  Comentarios
-                </label>
-                <textarea
-                  id="extra_info"
-                  value={newProposal.extra_info}
-                  onChange={(e) => setNewProposal({...newProposal, extra_info: e.target.value})}
-                  rows={4}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="proposal-files" className="block text-sm font-medium text-gray-700">
-                  Archivos de la propuesta
-                </label>
-                <div className="mt-1 flex items-center">
-                  <input
-                    type="file"
-                    id="proposal-files"
-                    onChange={handleProposalFileChange}
-                    className="hidden"
-                    multiple
-                  />
-                  <label
-                    htmlFor="proposal-files"
-                    className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <PlusIcon className="h-5 w-5 inline-block mr-2" />
-                    Agregar archivo
+      {userType === 'proveedor' && (
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Enviar Nueva Propuesta</h2>
+          {user ? (
+            isActive ? (
+              <form onSubmit={handleProposalSubmit}>
+                <div className="mb-4">
+                  <label htmlFor="extra_info" className="block text-sm font-medium text-gray-700">
+                    Comentarios
                   </label>
+                  <textarea
+                    id="extra_info"
+                    value={newProposal.extra_info}
+                    onChange={(e) => setNewProposal({...newProposal, extra_info: e.target.value})}
+                    rows={4}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus: focus:ring-indigo-200 focus:ring-opacity-50"
+                  />
                 </div>
-                <div className="mt-2">
-                  {proposalFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded-md mb-2">
-                      <span className="text-sm text-gray-600">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeProposalFile(index)}
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                <div className="mb-4">
+                  <label htmlFor="proposal-files" className="block text-sm font-medium text-gray-700">
+                    Archivos de la propuesta
+                  </label>
+                  <div className="mt-1 flex items-center">
+                    <input
+                      type="file"
+                      id="proposal-files"
+                      onChange={handleProposalFileChange}
+                      className="hidden"
+                      multiple
+                    />
+                    <label
+                      htmlFor="proposal-files"
+                      className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <PlusIcon className="h-5 w-5 inline-block mr-2" />
+                      Agregar archivo
+                    </label>
+                  </div>
+                  <div className="mt-2">
+                    {proposalFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded-md mb-2">
+                        <span className="text-sm text-gray-600">{file.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeProposalFile(index)}
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <Button type="submit">Enviar Propuesta</Button>
-            </form>
+                <Button type="submit">Enviar Propuesta</Button>
+              </form>
+            ) : (
+              <p className="text-red-500">Esta licitación ya no está activa. No se pueden enviar propuestas.</p>
+            )
           ) : (
-            <p className="text-red-500">Esta licitación ya no está activa. No se pueden enviar propuestas.</p>
-          )
-        ) : (
-          <div>
-            <p>Inicia sesión para enviar propuestas</p>
-            <Button onClick={() => setIsAuthModalOpen(true)}>Iniciar Sesión / Registrarse</Button>
-          </div>
-        )}
-      </div>
+            <div>
+              <p>Inicia sesión para enviar propuestas</p>
+              <Button onClick={() => setIsAuthModalOpen(true)}>Iniciar Sesión / Registrarse</Button>
+            </div>
+          )}
+        </div>
+      )}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

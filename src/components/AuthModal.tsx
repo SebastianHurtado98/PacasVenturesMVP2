@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -28,6 +35,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [enterpriseName, setEnterpriseName] = useState('')
   const [ruc, setRuc] = useState('')
+  const [userType, setUserType] = useState('')
   const { supabase } = useSupabase()
   const { toast } = useToast()
 
@@ -48,7 +56,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               user_name: userName,
               phone_number: phoneNumber,
               enterprise_name: enterpriseName,
-              ruc: ruc
+              ruc: ruc,
+              user_type: userType
             }
           }
         })
@@ -63,7 +72,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               email: email,
               phone_number: phoneNumber,
               enterprise_name: enterpriseName,
-              ruc: ruc
+              ruc: ruc,
+              user_type: userType
             })
           if (userError) throw userError
         }
@@ -161,6 +171,18 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                   onChange={handleNumericInput(setRuc)}
                   required
                 />
+              </div>
+              <div>
+                <Label htmlFor="userType">Tipo de usuario</Label>
+                <Select onValueChange={setUserType} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona el tipo de usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="proveedor">Proveedor</SelectItem>
+                    <SelectItem value="constructora">Constructora</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}

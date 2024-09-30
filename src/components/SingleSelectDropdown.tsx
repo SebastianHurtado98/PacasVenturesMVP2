@@ -7,15 +7,16 @@ interface Specialization {
   items: string[];
 }
 
-interface MultiSelectDropdownProps {
+interface SingleSelectDropdownProps {
   options: Specialization[]
-  selectedOptions: string[]
-  onChange: (selected: string[]) => void
+  selectedOption: string
+  onChange: (selected: string) => void
 }
 
-export default function MultiSelectDropdown({ options = [], selectedOptions = [], onChange }: MultiSelectDropdownProps) {
+export default function SingleSelectDropdown({ options = [], selectedOption = '', onChange }: SingleSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [inputValue, setInputValue] = useState(selectedOption)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -24,6 +25,7 @@ export default function MultiSelectDropdown({ options = [], selectedOptions = []
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
         setSearchTerm('')
+        setInputValue(selectedOption)
       }
     }
 
@@ -31,7 +33,11 @@ export default function MultiSelectDropdown({ options = [], selectedOptions = []
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [selectedOption])
+
+  useEffect(() => {
+    setInputValue(selectedOption)
+  }, [selectedOption])
 
   const handleInputClick = () => {
     setIsOpen(true)
@@ -41,20 +47,17 @@ export default function MultiSelectDropdown({ options = [], selectedOptions = []
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value)
+    const value = e.target.value
+    setInputValue(value)
+    setSearchTerm(value)
     setIsOpen(true)
   }
 
-  const toggleOption = (option: string) => {
-    const updatedSelection = selectedOptions.includes(option)
-      ? selectedOptions.filter(item => item !== option)
-      : [...selectedOptions, option]
-    onChange(updatedSelection)
-  }
-
-  const removeOption = (option: string) => {
-    const updatedSelection = selectedOptions.filter(item => item !== option)
-    onChange(updatedSelection)
+  const selectOption = (option: string) => {
+    onChange(option)
+    setSearchTerm('')
+    setInputValue(option)
+    setIsOpen(false)
   }
 
   const filteredOptions = options.map(category => ({
@@ -70,32 +73,12 @@ export default function MultiSelectDropdown({ options = [], selectedOptions = []
         className="border border-gray-300 rounded-md p-2 cursor-pointer"
         onClick={handleInputClick}
       >
-        <div className="flex flex-wrap gap-2 mb-2">
-          {selectedOptions.map(option => (
-            <span 
-              key={option} 
-              className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded flex items-center"
-            >
-              {option}
-              <button
-                type="button"
-                className="ml-1 text-blue-600 hover:text-blue-800 focus:outline-none"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeOption(option)
-                }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
         <input
           ref={inputRef}
           type="text"
-          placeholder={selectedOptions.length === 0 ? "Buscar especializaciones..." : ""}
-          className="w-full outline-none"
-          value={searchTerm}
+          placeholder="Buscar especialización..."
+          className="w-full outline-none cursor-pointer"
+          value={inputValue}
           onChange={handleInputChange}
           onClick={(e) => e.stopPropagation()}
         />
@@ -110,11 +93,11 @@ export default function MultiSelectDropdown({ options = [], selectedOptions = []
                   <div
                     key={item}
                     className="px-2 py-1 hover:bg-gray-100 cursor-pointer flex items-center"
-                    onClick={() => toggleOption(item)}
+                    onClick={() => selectOption(item)}
                   >
                     <input
-                      type="checkbox"
-                      checked={selectedOptions.includes(item)}
+                      type="radio"
+                      checked={selectedOption === item}
                       onChange={() => {}}
                       className="mr-2"
                     />

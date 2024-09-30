@@ -27,7 +27,9 @@ interface Bid {
   job_start_date: string
   initial_budget: number
   company_logo: string
-  project_name: string
+  project: {
+    name: string
+  }
   main_description: string
   active: boolean
   user: {
@@ -55,6 +57,7 @@ export default function Home() {
         .from('bid')
         .select(`
           *,
+          project (name),
           user (enterprise_name)
         `)
         .order('publication_end_date', { ascending: false });
@@ -168,7 +171,7 @@ export default function Home() {
                       }}
                     />
                   </div>
-                  <CardTitle>{bid.project_name}</CardTitle>
+                  <CardTitle>{bid.project?.name}</CardTitle>
                   <p className="text-sm text-gray-500">{bid.user.enterprise_name}</p>
                   <p className="text-sm text-gray-700 mt-2">{bid.main_description}</p>
                 </CardHeader>
