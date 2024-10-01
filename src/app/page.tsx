@@ -11,6 +11,8 @@ import { Toaster } from "@/components/ui/toaster"
 import MultiSelectDropdown from '@/components/MultiSelectDropdown'
 import CountdownTimer from '@/components/CountdownTimer'
 import { specializations } from '@/utils/specializations'
+import { AuthModal } from '@/components/AuthModal'
+import { useAuth } from '@/components/AuthProvider'
 import {
   Select,
   SelectContent,
@@ -43,12 +45,15 @@ export default function Home() {
   const router = useRouter()
   const { supabase } = useSupabase()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [bids, setBids] = useState<Bid[]>([])
   const [filteredBids, setFilteredBids] = useState<Bid[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [partidas, setPartidas] = useState<string[]>([])
   const [selectedPartidas, setSelectedPartidas] = useState<string[]>([])
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [selectedBidId, setSelectedBidId] = useState<number | null>(null)
 
   useEffect(() => {
     async function fetchBids() {
@@ -112,6 +117,22 @@ export default function Home() {
 
   const handleStatusChange = (value: FilterStatus) => {
     setFilterStatus(value)
+  }
+
+  const handleViewBid = (bidId: number) => {
+    if (user) {
+      router.push(`/proveedor/licitacion/${bidId}`)
+    } else {
+      setSelectedBidId(bidId)
+      setIsAuthModalOpen(true)
+    }
+  }
+
+  const handleAuthSuccess = () => {
+    setIsAuthModalOpen(false)
+    if (selectedBidId) {
+      router.push(`/proveedor/licitacion/${selectedBidId}`)
+    }
   }
 
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
@@ -188,7 +209,7 @@ export default function Home() {
                 </CardContent>
                 <CardFooter>
                   <Button 
-                    onClick={() => router.push(`/licitacion/${bid.id}`)} 
+                    onClick={() => handleViewBid(bid.id)} 
                     className="w-full"
                     disabled={!isActive}
                   >
@@ -200,6 +221,11 @@ export default function Home() {
           })}
         </div>
       </main>
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
       <Toaster />
     </div>
   )

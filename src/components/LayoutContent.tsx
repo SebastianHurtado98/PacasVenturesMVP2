@@ -55,14 +55,11 @@ export default function LayoutContent({ children }: LayoutContentProps) {
               <nav className="space-x-4">
                 {userType === 'constructora' && (
                   <>
-                    <Link href="/constructora/licitaciones" className="text-white hover:underline">
+                    <Link href="/constructora/proyectos/all/licitaciones" className="text-white hover:underline">
                       Mis Licitaciones
                     </Link>
                     <Link href="/constructora/proyectos" className="text-white hover:underline">
                       Mis Proyectos
-                    </Link>
-                    <Link href="/constructora/usuarios-y-permisos" className="text-white hover:underline">
-                      Usuarios y Permisos
                     </Link>
                   </>
                 )}
