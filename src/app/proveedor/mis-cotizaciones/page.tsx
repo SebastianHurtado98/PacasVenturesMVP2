@@ -38,6 +38,11 @@ interface ProposalFileInfo {
   file_path: string;
 }
 
+interface UserData {
+  id: number;
+  user_type: string;
+}
+
 export default function MisCotizaciones() {
   const router = useRouter()
   const { supabase } = useSupabase()
@@ -47,11 +52,41 @@ export default function MisCotizaciones() {
   const [expandedRows, setExpandedRows] = useState<number[]>([])
   const [proposalFiles, setProposalFiles] = useState<{[key: number]: ProposalFileInfo[]}>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState<UserData | null>(null)
+
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!user) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('id, user_type')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (error) throw error
+
+        setUserData(data)
+      } catch (error) {
+        console.error('Error fetching user data:', error)
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la información del usuario. Por favor, intenta de nuevo.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    fetchUserData()
+  }, [supabase, user, toast])
 
   useEffect(() => {
     async function fetchProposals() {
-      if (!user) {
-        setIsLoading(false)
+      if (!userData) {
         return
       }
 
@@ -71,7 +106,7 @@ export default function MisCotizaciones() {
               )
             )
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', userData.id)
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -112,7 +147,7 @@ export default function MisCotizaciones() {
     }
 
     fetchProposals()
-  }, [supabase, toast, user])
+  }, [supabase, toast, userData])
 
   const handleFileOpen = async (filePath: string, fileName: string) => {
     try {
@@ -150,7 +185,7 @@ export default function MisCotizaciones() {
 
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
 
-  if (!user) {
+  if (!user || !userData) {
     return (
       <div className="text-center py-10">
         <h1 className="text-2xl font-bold mb-4">Acceso Restringido</h1>

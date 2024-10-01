@@ -14,7 +14,7 @@ import { AuthModal } from '@/components/AuthModal'
 
 interface Proposal {
   id: number;
-  user_id: string;
+  user_id: number;
   bid_id: number;
   state: 'accepted' | 'rejected' | 'pending' | 'sent';
   extra_info: string;
@@ -63,12 +63,17 @@ interface LinkInfo {
   bid_id: number;
 }
 
+interface UserData {
+  id: number;
+  user_type: string;
+}
+
 export default function LicitacionDetalle({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { supabase } = useSupabase();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [userType, setUserType] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [licitacion, setLicitacion] = useState<Licitacion | null>(null);
   const [bidFiles, setBidFiles] = useState<FileInfo[]>([]);
   const [bidLinks, setBidLinks] = useState<LinkInfo[]>([]);
@@ -81,24 +86,21 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const [newProposal, setNewProposal] = useState<Omit<Proposal, 'id' | 'user_id' | 'bid_id' | 'state'>>({extra_info: ''});
   const [userDataLoaded, setUserDataLoaded] = useState(false);
 
-  console.log("User outside useEffect:", user);
-
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
         try {
-          const { data: userData, error: userError } = await supabase
+          const { data, error } = await supabase
             .from('user')
-            .select('user_type')
+            .select('id, user_type')
             .eq('auth_user_id', user.id)
             .single();
         
-          if (userError) throw userError;
-          setUserType(userData.user_type);
-          console.log("User type", userData.user_type);
+          if (error) throw error;
+          setUserData(data);
+          setUserDataLoaded(true);
         } catch (error) {
           console.error('Error fetching user data:', error);
-        } finally {
           setUserDataLoaded(true);
         }
       } else {
@@ -124,8 +126,6 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
         if (licitacionError) throw licitacionError;
         setLicitacion(licitacionData);
-
-        console.log("User inside fetchLicitacionAndProposals:", user);
 
         const { data: filesData, error: filesError } = await supabase
           .from('bid_doc')
@@ -179,7 +179,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
     if (userDataLoaded) {
       fetchLicitacionAndProposals();
     }
-  }, [supabase, params.id, toast, userDataLoaded, user]);
+  }, [supabase, params.id, toast, userDataLoaded]);
 
   const handleProposalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -193,7 +193,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
   const handleProposalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!licitacion || !user) {
+    if (!licitacion || !userData) {
       toast({
         title: "Error",
         description: "No se pudo enviar la propuesta. Por favor, inicia sesión e intenta de nuevo.",
@@ -207,7 +207,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         .from('proposal')
         .insert({
           ...newProposal,
-          user_id: user.id,
+          user_id: userData.id,
           bid_id: licitacion.id,
           state: 'sent',
         })
@@ -367,7 +367,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {userType === 'proveedor' && (
+      {userData?.user_type === 'proveedor' && (
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Enviar Nueva Propuesta</h2>
           {user ? (
