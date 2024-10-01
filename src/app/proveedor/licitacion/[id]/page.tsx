@@ -261,7 +261,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
   const handleWhatsAppQuestion = () => {
     if (licitacion) {
       const message = encodeURIComponent(`¡Hola! Tengo una consulta sobre la siguiente licitación en Licibit: https://pacas-ventures-mvp-2.vercel.app/licitacion/${licitacion.id}`);
-      const whatsappUrl = `https://wa.me/51991124187?text=${message}`;
+      const whatsappUrl = `https://wa.me/51970748423?text=${message}`;
       window.open(whatsappUrl, '_blank');
     }
   };

@@ -8,6 +8,7 @@ import { useSupabase } from '@/components/supabase-provider'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { Eye } from 'lucide-react'
 
 interface Project {
   id: number;
@@ -85,7 +86,13 @@ export default function Proyectos() {
                 <p><strong>Dirección:</strong> {project.location}</p>
                 <p>{project.description}</p>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex justify-between">
+                <Link href={`/constructora/proyectos/${project.id}/ver-detalle`}>
+                  <Button variant="outline">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Ver
+                  </Button>
+                </Link>
                 <Link href={`/constructora/proyectos/${project.id}/licitaciones`}>
                   <Button>Ver licitaciones</Button>
                 </Link>

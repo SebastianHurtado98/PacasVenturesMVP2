@@ -25,7 +25,7 @@ interface Proposal {
   }[]
 }
 
-export default function Cotizaciones({ params }: { params: { id: string, licitacionId: string } }) {
+export default function Cotizaciones({ params }: { params: { id: string } }) {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +57,7 @@ export default function Cotizaciones({ params }: { params: { id: string, licitac
               enterprise_name
             )
           `)
-          .eq('bid_id', params.licitacionId)
+          .eq('bid_id', params.id)
 
         if (proposalsError) throw proposalsError
 
@@ -69,11 +69,12 @@ export default function Cotizaciones({ params }: { params: { id: string, licitac
 
           if (docsError) throw docsError
 
+          // Forzar el tipo de user a un objeto único en lugar de un array
           const user = Array.isArray(proposal.user) ? proposal.user[0] : proposal.user
 
           return { 
             ...proposal, 
-            user: user as Proposal['user'],
+            user: user as Proposal['user'],  // Forzar el tipo
             documents: docsData 
           }
         }))
@@ -88,7 +89,7 @@ export default function Cotizaciones({ params }: { params: { id: string, licitac
     }
 
     fetchProposals()
-  }, [supabase, user, router, params.licitacionId])
+  }, [supabase, user, router, params.id])
 
   const handleStateChange = async (proposalId: number, newState: 'accepted' | 'rejected') => {
     try {
@@ -173,7 +174,7 @@ export default function Cotizaciones({ params }: { params: { id: string, licitac
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Cotizaciones para Licitación {params.licitacionId}</h1>
+      <h1 className="text-2xl font-bold mb-4">Cotizaciones</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {proposals.map((proposal) => (
           <Card key={proposal.id}>

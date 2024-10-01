@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useSupabase } from '@/components/supabase-provider'
 import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye } from 'lucide-react'
 import MultiSelectDropdown from '@/components/MultiSelectDropdown'
 import { specializations } from '@/utils/specializations'
 import {
@@ -226,9 +226,17 @@ export default function LicitacionesProyecto() {
                   <TableCell>{licitacion.active ? 'Activo' : 'Inactivo'}</TableCell>
                   <TableCell>{licitacion.project.name}</TableCell>
                   <TableCell>
-                    <Link href={`/constructora/proyectos/${licitacion.project_id}/licitaciones/${licitacion.id}/cotizaciones`}>
-                      <Button variant="outline" size="sm">Cotizaciones</Button>
-                    </Link>
+                    <div className="flex space-x-2">
+                      <Link href={`/constructora/proyectos/${licitacion.project_id}/licitaciones/${licitacion.id}/ver-detalle`}>
+                        <Button variant="outline" size="sm">
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver
+                        </Button>
+                      </Link>
+                      <Link href={`/constructora/proyectos/${licitacion.project_id}/licitaciones/${licitacion.id}/cotizaciones`}>
+                        <Button variant="outline" size="sm">Cotizaciones</Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
