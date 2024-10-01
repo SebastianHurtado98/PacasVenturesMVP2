@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from '@/components/AuthProvider'
 import CountdownTimer from '@/components/CountdownTimer'
 import { AuthModal } from '@/components/AuthModal'
+import { BASE_URL, WHATSAPP_NUMBER } from '@/utils/constants'
 
 interface Proposal {
   id: number;
@@ -260,8 +261,8 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
 
   const handleWhatsAppQuestion = () => {
     if (licitacion) {
-      const message = encodeURIComponent(`¡Hola! Tengo una consulta sobre la siguiente licitación en Licibit: https://pacas-ventures-mvp-2.vercel.app/licitacion/${licitacion.id}`);
-      const whatsappUrl = `https://wa.me/51970748423?text=${message}`;
+      const message = encodeURIComponent(`¡Hola! Tengo una consulta sobre la siguiente licitación en Licibit: ${BASE_URL}/licitacion/${licitacion.id}`);
+      const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
       window.open(whatsappUrl, '_blank');
     }
   };

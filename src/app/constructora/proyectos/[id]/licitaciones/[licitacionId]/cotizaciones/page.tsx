@@ -3,10 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useSupabase } from '@/components/supabase-provider'
 import { useAuth } from '@/components/AuthProvider'
-import { Loader2, Download } from 'lucide-react'
+import { useToast } from "@/hooks/use-toast"
+import { Toaster } from "@/components/ui/toaster"
+import { Loader2, Download, MessageCircle } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { WHATSAPP_NUMBER, BASE_URL } from '@/utils/constants'
 
 interface Proposal {
   id: number
@@ -25,14 +29,16 @@ interface Proposal {
   }[]
 }
 
-export default function Cotizaciones({ params }: { params: { id: string } }) {
+export default function Cotizaciones({ params }: { params: { id: string, licitacionId: string } }) {
   const [proposals, setProposals] = useState<Proposal[]>([])
+  const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [filterState, setFilterState] = useState<'all' | 'sent' | 'accepted' | 'rejected'>('all')
 
   const { supabase } = useSupabase()
   const { user } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!user) {
@@ -42,7 +48,6 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
 
     const fetchProposals = async () => {
       setIsLoading(true)
-      setError(null)
       try {
         const { data: proposalsData, error: proposalsError } = await supabase
           .from('proposal')
@@ -57,7 +62,7 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
               enterprise_name
             )
           `)
-          .eq('bid_id', params.id)
+          .eq('bid_id', params.licitacionId)
 
         if (proposalsError) throw proposalsError
 
@@ -69,29 +74,41 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
 
           if (docsError) throw docsError
 
-          // Forzar el tipo de user a un objeto único en lugar de un array
           const user = Array.isArray(proposal.user) ? proposal.user[0] : proposal.user
 
           return { 
             ...proposal, 
-            user: user as Proposal['user'],  // Forzar el tipo
+            user: user as Proposal['user'],
             documents: docsData 
           }
         }))
 
         setProposals(proposalsWithDocs)
+        setFilteredProposals(proposalsWithDocs)
       } catch (error) {
         console.error('Error fetching proposals:', error)
-        setError('Error al cargar las cotizaciones. Por favor, intenta de nuevo.')
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las cotizaciones. Por favor, intenta de nuevo.",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchProposals()
-  }, [supabase, user, router, params.id])
+  }, [supabase, user, router, params.licitacionId, toast])
 
-  const handleStateChange = async (proposalId: number, newState: 'accepted' | 'rejected') => {
+  useEffect(() => {
+    if (filterState === 'all') {
+      setFilteredProposals(proposals)
+    } else {
+      setFilteredProposals(proposals.filter(proposal => proposal.state === filterState))
+    }
+  }, [filterState, proposals])
+
+  const handleStateChange = async (proposalId: number, newState: 'sent' | 'accepted' | 'rejected') => {
     try {
       const { error } = await supabase
         .from('proposal')
@@ -103,9 +120,18 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
       setProposals(proposals.map(proposal => 
         proposal.id === proposalId ? { ...proposal, state: newState } : proposal
       ))
+
+      toast({
+        title: "Estado actualizado",
+        description: "El estado de la cotización se ha actualizado correctamente.",
+      })
     } catch (error) {
       console.error('Error updating proposal state:', error)
-      setError('Error al actualizar el estado de la cotización. Por favor, intenta de nuevo.')
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado de la cotización. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -128,7 +154,31 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading file:', error)
-      setError('Error al descargar el archivo. Por favor, intenta de nuevo.')
+      toast({
+        title: "Error",
+        description: "No se pudo descargar el archivo. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getStateText = (state: string) => {
+    switch (state) {
+      case 'sent':
+        return 'Pendiente'
+      case 'accepted':
+        return 'Contactar'
+      case 'rejected':
+        return 'Rechazar'
+      default:
+        return ''
+    }
+  }
+
+  const handleWhatsAppAction = (proposal: Proposal) => {
+    if (proposal.state === 'accepted') {
+      const message = encodeURIComponent(`¡Hola! Quiero conectar con el proveedor de la siguiente cotización en Licibit: ${BASE_URL}/admin/cotizacion/${proposal.id}`)
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
     }
   }
 
@@ -140,90 +190,80 @@ export default function Cotizaciones({ params }: { params: { id: string } }) {
     )
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-4">
-        <p className="text-red-500">{error}</p>
-      </div>
-    )
-  }
-
-  const getStateColor = (state: string) => {
-    switch (state) {
-      case 'accepted':
-        return 'text-green-600'
-      case 'rejected':
-        return 'text-red-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
-  const getStateText = (state: string) => {
-    switch (state) {
-      case 'sent':
-        return 'Pendiente'
-      case 'accepted':
-        return 'Aprobado'
-      case 'rejected':
-        return 'Rechazado'
-      default:
-        return ''
-    }
-  }
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Cotizaciones</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {proposals.map((proposal) => (
-          <Card key={proposal.id}>
-            <CardHeader>
-              <CardTitle>{proposal.user.enterprise_name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p><strong>Nombre:</strong> {proposal.user.user_name}</p>
-              <p><strong>Email:</strong> {proposal.user.email}</p>
-              <p><strong>Información adicional:</strong> {proposal.extra_info}</p>
-              <p>
-                <strong>Estado:</strong> 
-                <span className={`ml-2 font-semibold ${getStateColor(proposal.state)}`}>
-                  {getStateText(proposal.state)}
-                </span>
-              </p>
-              <div className="mt-4">
-                <strong>Documentos:</strong>
+      <div className="mb-4">
+        <Select onValueChange={(value: 'all' | 'sent' | 'accepted' | 'rejected') => setFilterState(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="sent">Pendiente</SelectItem>
+            <SelectItem value="accepted">Contactar</SelectItem>
+            <SelectItem value="rejected">Rechazar</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nombre de la empresa</TableHead>
+            <TableHead>Propuesta económica</TableHead>
+            <TableHead>Información adicional</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Contactar</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredProposals.map((proposal) => (
+            <TableRow key={proposal.id}>
+              <TableCell>{proposal.user.enterprise_name}</TableCell>
+              <TableCell>
                 {proposal.documents.map((doc) => (
                   <Button
                     key={doc.id}
                     variant="outline"
                     size="sm"
-                    className="mt-2 mr-2"
+                    className="mr-2 mb-2"
                     onClick={() => handleDownload(doc.file_path, doc.file_name)}
                   >
                     <Download className="mr-2 h-4 w-4" /> {doc.file_name}
                   </Button>
                 ))}
-              </div>
-              <div className="mt-4 space-x-2">
-                <Button
-                  onClick={() => handleStateChange(proposal.id, 'accepted')}
-                  disabled={proposal.state === 'accepted'}
+              </TableCell>
+              <TableCell>{proposal.extra_info}</TableCell>
+              <TableCell>
+                <Select 
+                  onValueChange={(value: 'sent' | 'accepted' | 'rejected') => handleStateChange(proposal.id, value)}
+                  defaultValue={proposal.state}
                 >
-                  Aprobar
-                </Button>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={getStateText(proposal.state)} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sent">Pendiente</SelectItem>
+                    <SelectItem value="accepted">Contactar</SelectItem>
+                    <SelectItem value="rejected">Rechazar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell>
                 <Button
-                  onClick={() => handleStateChange(proposal.id, 'rejected')}
-                  variant="destructive"
-                  disabled={proposal.state === 'rejected'}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleWhatsAppAction(proposal)}
+                  disabled={proposal.state !== 'accepted'}
                 >
-                  Rechazar
+                  <MessageCircle className={`h-6 w-6 ${proposal.state === 'accepted' ? 'text-green-500' : 'text-gray-400'}`} />
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Toaster />
     </div>
   )
 }
