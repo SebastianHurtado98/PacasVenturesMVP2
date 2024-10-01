@@ -7,6 +7,7 @@ import SupabaseProvider from '@/components/supabase-provider'
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/components/AuthProvider'
 import LayoutContent from '@/components/LayoutContent'
+import { Footer } from '@/components/Footer'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -34,9 +35,7 @@ export default async function RootLayout({
             <LayoutContent>
               {children}
             </LayoutContent>
-            <footer className="bg-gray-200 p-4 mt-8">
-              <p className="text-center text-gray-600">© 2024 Licibit</p>
-            </footer>
+            <Footer/>
             <Toaster />
           </AuthProvider>
         </SupabaseProvider>
