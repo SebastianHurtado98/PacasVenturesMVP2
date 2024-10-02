@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Loader2, Eye } from 'lucide-react'
 import MultiSelectDropdown from '@/components/MultiSelectDropdown'
 import { specializations } from '@/utils/specializations'
+import { useAuth } from '@/components/AuthProvider'
 import {
   Select,
   SelectContent,
@@ -50,14 +51,32 @@ export default function LicitacionesProyecto() {
   const [selectedProject, setSelectedProject] = useState<string>(id === 'all' ? 'all' : id as string)
   const [selectedPartidas, setSelectedPartidas] = useState<string[]>([])
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) return
+
       try {
+        // First, fetch the user's ID from the custom 'user' table
+        const { data: userData, error: userError } = await supabase
+          .from('user')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (userError) throw userError
+
+        if (!userData) {
+          throw new Error('User not found in the custom user table')
+        }
+
         // Fetch all projects
         const { data: projectsData, error: projectsError } = await supabase
           .from('project')
-          .select('id, name')
+          .select('id, name, user_id')
+          .eq('user_id', userData.id)
+          
 
         if (projectsError) throw projectsError
 
@@ -72,8 +91,10 @@ export default function LicitacionesProyecto() {
             publication_end_date, 
             active, 
             description,
-            project_id
+            project_id,
+            user_id
           `)
+          .eq('user_id', userData.id)
 
         // If a specific project is selected, filter by that project
         if (id !== 'all') {

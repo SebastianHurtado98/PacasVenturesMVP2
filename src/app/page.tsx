@@ -3,19 +3,13 @@
 import { ThemeProvider } from "next-themes"
 import { Container } from "@/components/Container"
 import { Customers } from "@/components/Customers"
-import { SectionTitle } from "@/components/SectionTitle"
-import { Benefits } from "@/components/Benefits"
-import { Video } from "@/components/Video"
-import { Testimonials } from "@/components/Testimonials"
-import { Faq } from "@/components/Faq"
-import { Cta } from "@/components/Cta"
 import Licitaciones from '@/components/Licitaciones'
 import { AuthModal } from "@/components/AuthModal"
 import { useAuth } from "@/components/AuthProvider"
 
 import { benefitOne, benefitTwo } from "@/components/data"
 import Image from "next/image";
-import heroImg from "../../public/img/hero.png";
+import heroImg from "../../public/img/hero2.jpg";
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 

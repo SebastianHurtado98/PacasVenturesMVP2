@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
 export const useLastVisitedPage = () => {
+  console.log("Algo")
   const pathname = usePathname()
 
   useEffect(() => {
