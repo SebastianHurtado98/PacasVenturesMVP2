@@ -25,30 +25,34 @@ interface Bid {
   id: number
   partida: string
   publication_end_date: string
-  location: string
   job_start_date: string
   initial_budget: number
-  company_logo: string
   project: {
     name: string
+    location: string
   }
   main_description: string
   active: boolean
   user: {
     enterprise_name: string
+    company_logo: string
   }
 }
 
 type FilterStatus = 'all' | 'active' | 'inactive'
 
-export default function Licitaciones() {
+interface LicitacionesProps {
+  initialBids: Bid[]
+}
+
+export default function Licitaciones({ initialBids }: LicitacionesProps) {
   const router = useRouter()
   const { supabase } = useSupabase()
   const { toast } = useToast()
   const { user } = useAuth()
-  const [bids, setBids] = useState<Bid[]>([])
-  const [filteredBids, setFilteredBids] = useState<Bid[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [bids, setBids] = useState<Bid[]>(initialBids)
+  const [filteredBids, setFilteredBids] = useState<Bid[]>(initialBids)
+  const [isLoading, setIsLoading] = useState(false)
   const [partidas, setPartidas] = useState<string[]>([])
   const [selectedPartidas, setSelectedPartidas] = useState<string[]>([])
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
@@ -56,45 +60,10 @@ export default function Licitaciones() {
   const [selectedBidId, setSelectedBidId] = useState<number | null>(null)
 
   useEffect(() => {
-    async function fetchBids() {
-      try {
-        const { data, error } = await supabase
-        .from('bid')
-        .select(`
-          *,
-          project (name),
-          user (enterprise_name)
-        `)
-        .order('publication_end_date', { ascending: false });
-
-        if (error) throw error
-
-        if (data) {
-          const typedBids: Bid[] = data.map(bid => ({
-            ...bid,
-            user: bid.user || { enterprise_name: 'Desconocido' }
-          }))
-          setBids(typedBids)
-          setFilteredBids(typedBids)
-        
-          // Extract unique partidas
-          const uniquePartidas = Array.from(new Set(typedBids.map(bid => bid.partida)))
-          setPartidas(uniquePartidas)
-        }
-      } catch (error) {
-        console.error('Error fetching bids:', error)
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las licitaciones. Por favor, intenta de nuevo.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchBids()
-  }, [supabase, toast])
+    // Extract unique partidas from initialBids
+    const uniquePartidas = Array.from(new Set(initialBids.map(bid => bid.partida)))
+    setPartidas(uniquePartidas)
+  }, [initialBids])
 
   useEffect(() => {
     const now = new Date()
@@ -134,9 +103,7 @@ export default function Licitaciones() {
       router.push(`/proveedor/licitacion/${selectedBidId}`)
     }
   }
-
-  if (isLoading) return <div className="text-center py-10">Cargando...</div>
-
+  
   return (
     <>
       <div className="mb-8 space-y-4">
@@ -176,7 +143,7 @@ export default function Licitaciones() {
               <CardHeader>
                 <div className="w-full h-40 relative mb-4">
                   <Image
-                    src={bid.company_logo || '/placeholder.svg'}
+                    src={bid.user.company_logo || '/placeholder.svg'}
                     alt={`Logo de ${bid.user.enterprise_name}`}
                     layout="fill"
                     objectFit="contain"
@@ -198,7 +165,7 @@ export default function Licitaciones() {
                   {' '}
                   (<CountdownTimer endDate={bid.publication_end_date} />)
                 </p>
-                <p><strong>Ubicación:</strong> {bid.location}</p>
+                <p><strong>Ubicación:</strong> {bid.project.location}</p>
                 <p><strong>Fecha de Inicio:</strong> {new Date(bid.job_start_date).toLocaleDateString()}</p>
                 <p><strong>Estado:</strong> {isActive ? 'Activa' : 'Inactiva'}</p>
               </CardContent>

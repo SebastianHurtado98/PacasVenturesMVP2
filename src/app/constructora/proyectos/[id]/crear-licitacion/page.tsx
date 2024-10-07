@@ -195,7 +195,6 @@ export default function CrearLicitacion() {
             type="date"
             value={formData.job_start_date}
             onChange={handleChange}
-            required
           />
         </div>
         <div>
@@ -206,7 +205,6 @@ export default function CrearLicitacion() {
             type="date"
             value={formData.publication_end_date}
             onChange={handleChange}
-            min={today}
             max={formData.job_start_date || undefined}
             required
           />

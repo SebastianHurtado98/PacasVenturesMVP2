@@ -1,88 +1,54 @@
-'use client'
-
-import { ThemeProvider } from "next-themes"
-import { Container } from "@/components/Container"
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import Image from 'next/image'
+import heroImg from '../../public/img/hero2.jpg'
 import { Customers } from "@/components/Customers"
-import Licitaciones from '@/components/Licitaciones'
-import { AuthModal } from "@/components/AuthModal"
-import { useAuth } from "@/components/AuthProvider"
+import ClientHome from '@/components/ClientHome'
 
-import { benefitOne, benefitTwo } from "@/components/data"
-import Image from "next/image";
-import heroImg from "../../public/img/hero2.jpg";
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+export default async function Home() {
+  const supabase = createServerComponentClient({ cookies })
 
-export default function Home() {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user } = useAuth();
-  const router = useRouter();
+  const { data: bids, error } = await supabase
+    .from('bid')
+    .select(`
+      *,
+      project (name, location),
+      user (enterprise_name, company_logo)
+    `)
+    .order('publication_end_date', { ascending: false })
 
-  const handleAuthAction = () => {
-    if (user) {
-      router.push('/');
-    } else {
-      setIsAuthModalOpen(true);
-    }
-  };
+  if (error) {
+    console.error('Error fetching bids:', error)
+    return <div>Error loading bids</div>
+  }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light">
-      <Container>
-        <Container className="flex flex-wrap ">
-          <div className="flex items-center w-full lg:w-1/2">
-            <div className="max-w-2xl mb-8">
-              <h1 className="text-4xl font-bold leading-snug tracking-tight text-gray-800 lg:text-4xl lg:leading-tight xl:text-6xl xl:leading-tight dark:text-white">
-                Conectamos los mejores proveedores y constructores
-              </h1>
-              <p className="py-5 text-xl leading-normal text-gray-500 lg:text-xl xl:text-2xl dark:text-gray-300">
-                Multiplicamos oportunidades para proveedores y aumentamos la productividad de constructoras.
-              </p>
-
-              <div className="flex flex-col items-start space-y-3 sm:space-x-4 sm:space-y-0 sm:items-center sm:flex-row">
-                {!user && (
-                  <button
-                    onClick={handleAuthAction}
-                    className="px-8 py-4 text-lg font-medium text-center text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-                  >
-                    Iniciar sesión
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-center w-full lg:w-1/2">
-            <div className="">
-              <Image
-                src={heroImg}
-                width="616"
-                height="617"
-                className={"object-cover"}
-                alt="Hero Illustration"
-                loading="eager"
-                placeholder="blur"
-              />
-            </div>
-          </div>
-        </Container>
-        <div className="min-h-screen">
-          <main className="container mx-auto px-4 py-16">
-            <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
-              Licitaciones
+    <ClientHome initialBids={bids || []}>
+      <div className="flex flex-wrap">
+        <div className="flex items-center w-full lg:w-1/2">
+          <div className="max-w-2xl mb-8">
+            <h1 className="text-4xl font-bold leading-snug tracking-tight text-gray-800 lg:text-4xl lg:leading-tight xl:text-6xl xl:leading-tight dark:text-white">
+              Conectamos los mejores proveedores y constructores
             </h1>
-            <Licitaciones />
-          </main>
+            <p className="py-5 text-xl leading-normal text-gray-500 lg:text-xl xl:text-2xl dark:text-gray-300">
+              Multiplicamos oportunidades para proveedores y aumentamos la productividad de constructoras.
+            </p>
+          </div>
         </div>
-        <Customers/>
-      </Container>
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={() => {
-          setIsAuthModalOpen(false);
-          router.push('/');
-        }}
-      />
-    </ThemeProvider>
+        <div className="flex items-center justify-center w-full lg:w-1/2">
+          <div className="">
+            <Image
+              src={heroImg}
+              width={616}
+              height={617}
+              className="object-cover"
+              alt="Hero Illustration"
+              priority
+            />
+          </div>
+        </div>
+      </div>
+      <Customers />
+    </ClientHome>
   )
 }
