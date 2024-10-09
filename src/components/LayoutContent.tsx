@@ -64,7 +64,7 @@ export default function LayoutContent({ children }: LayoutContentProps) {
                   </>
                 )}
                 {userType === 'proveedor' && (
-                  <Link href="proveedor/mis-cotizaciones" className="text-white hover:underline">
+                  <Link href="/proveedor/mis-cotizaciones" className="text-white hover:underline">
                     Mis Cotizaciones
                   </Link>
                 )}

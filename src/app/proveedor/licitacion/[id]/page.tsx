@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider'
 import CountdownTimer from '@/components/CountdownTimer'
 import { AuthModal } from '@/components/AuthModal'
 import { BASE_URL, WHATSAPP_NUMBER } from '@/utils/constants'
+import Link from 'next/link'
 
 interface Proposal {
   id: number;
@@ -197,7 +198,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
     if (!licitacion || !userData) {
       toast({
         title: "Error",
-        description: "No se pudo enviar la propuesta. Por favor, inicia sesión e intenta de nuevo.",
+        description: "No se pudo enviar la cotización. Por favor, inicia sesión e intenta de nuevo.",
         variant: "destructive",
       });
       return;
@@ -239,8 +240,8 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
       setProposals([...proposals, proposalData]);
 
       toast({
-        title: "Propuesta enviada",
-        description: "Tu propuesta ha sido enviada exitosamente.",
+        title: "cotización enviada",
+        description: "Tu cotización ha sido enviada exitosamente.",
       });
 
       router.push('/proveedor/mis-cotizaciones');
@@ -249,7 +250,7 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
       console.error('Error submitting proposal:', error);
       toast({
         title: "Error",
-        description: "No se pudo enviar la propuesta. Por favor, intenta de nuevo.",
+        description: "No se pudo enviar la cotización. Por favor, intenta de nuevo.",
         variant: "destructive",
       });
     }
@@ -368,9 +369,9 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {userData?.user_type === 'proveedor' && (
+      {userData?.user_type === 'proveedor' ? (
         <div className="bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Enviar Nueva Propuesta</h2>
+          <h2 className="text-xl font-semibold mb-4">Enviar Nueva Cotización</h2>
           {user ? (
             isActive ? (
               <form onSubmit={handleProposalSubmit}>
@@ -383,12 +384,12 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
                     value={newProposal.extra_info}
                     onChange={(e) => setNewProposal({...newProposal, extra_info: e.target.value})}
                     rows={4}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus: focus:ring-indigo-200 focus:ring-opacity-50"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring-indigo-200 focus:ring-opacity-50"
                   />
                 </div>
-                <div className="mb-4">
+                <div  className="mb-4">
                   <label htmlFor="proposal-files" className="block text-sm font-medium text-gray-700">
-                    Archivos de la propuesta
+                    Archivos de la cotización
                   </label>
                   <div className="mt-1 flex items-center">
                     <input
@@ -422,19 +423,31 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
                     ))}
                   </div>
                 </div>
-                <Button type="submit">Enviar Propuesta</Button>
+                <Button type="submit">Enviar Cotización</Button>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                <Link href="/proveedor/mis-cotizaciones/">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full bg-white text-black border-gray-300 hover:bg-gray-100"
+                  >
+                    Ver mis cotizaciones
+                  </Button>
+                  </Link>
+                </div>
               </form>
             ) : (
-              <p className="text-red-500">Esta licitación ya no está activa. No se pueden enviar propuestas.</p>
+              <p className="text-red-500">Esta licitación ya no está activa. No se pueden enviar cotizaciones.</p>
             )
           ) : (
-            <div>
-              <p>Inicia sesión para enviar propuestas</p>
-              <Button onClick={() => setIsAuthModalOpen(true)}>Iniciar Sesión / Registrarse</Button>
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-4">Si quieres enviar una cotización, inicia sesión</h2>
+              <Button onClick={() => setIsAuthModalOpen(true)}>Iniciar Sesión</Button>
             </div>
           )}
         </div>
-      )}
+      ) : null}
+
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

@@ -8,6 +8,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from 'lucide-react'
+import Link from 'next/link'
 
 type ProposalState = 'sent' | 'accepted' | 'rejected'
 
@@ -180,7 +181,7 @@ export default function MisCotizaciones() {
   }
 
   const navigateToLicitacionDetail = (bidId: number) => {
-    router.push(`/licitacion/${bidId}`)
+    router.push(`proveedor/licitacion/${bidId}`)
   }
 
   if (isLoading) return <div className="text-center py-10">Cargando...</div>
@@ -273,9 +274,11 @@ export default function MisCotizaciones() {
                         <h4 className="font-semibold mb-2">Comentario:</h4>
                         <p>{proposal.extra_info || 'Sin comentarios'}</p>
                       </div>
-                      <Button onClick={() => navigateToLicitacionDetail(proposal.bid.id)}>
+                      <Link href={`/proveedor/licitacion/${proposal.bid_id}`}>
+                        <Button>
                         Ver detalle de la licitación
-                      </Button>
+                        </Button>
+                      </Link>
                     </td>
                   </tr>
                 )}
