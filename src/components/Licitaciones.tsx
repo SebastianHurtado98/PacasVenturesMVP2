@@ -89,12 +89,7 @@ export default function Licitaciones({ initialBids }: LicitacionesProps) {
   }
 
   const handleViewBid = (bidId: number) => {
-    if (user) {
-      router.push(`/proveedor/licitacion/${bidId}`)
-    } else {
-      setSelectedBidId(bidId)
-      setIsAuthModalOpen(true)
-    }
+    router.push(`/proveedor/licitacion/${bidId}`)
   }
 
   const handleAuthSuccess = () => {

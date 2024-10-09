@@ -369,7 +369,6 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {userData?.user_type === 'proveedor' ? (
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Enviar Nueva Cotización</h2>
           {user ? (
@@ -446,7 +445,6 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
             </div>
           )}
         </div>
-      ) : null}
 
       <AuthModal
         isOpen={isAuthModalOpen}
