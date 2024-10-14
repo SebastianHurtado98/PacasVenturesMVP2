@@ -70,6 +70,10 @@ interface UserData {
   user_type: string;
 }
 
+function removeAccents(str: string) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 export default function LicitacionDetalle({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { supabase } = useSupabase();
@@ -219,21 +223,23 @@ export default function LicitacionDetalle({ params }: { params: { id: string } }
       if (proposalError) throw proposalError;
 
       for (const file of proposalFiles) {
-        const fileName = `${Date.now()}_${file.name}`;
+        const cleanFileName = removeAccents(file.name);
+        const fileName = `${Date.now()}_${cleanFileName}`;
+        
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('proposal_files')
           .upload(fileName, file);
-
+      
         if (uploadError) throw uploadError;
-
+      
         const { error: fileError } = await supabase
           .from('proposal_doc')
           .insert({ 
             proposal_id: proposalData.id,
-            file_name: file.name, 
+            file_name: file.name,
             file_path: uploadData.path 
           });
-
+      
         if (fileError) throw fileError;
       }
 
